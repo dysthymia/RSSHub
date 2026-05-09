@@ -95,7 +95,7 @@ async function handler(ctx: Context): Promise<Data> {
     }
 
     const size = Math.min(Number.parseInt(ctx.req.query('limit') || `${defaultSize}`, 10) || defaultSize, maxSize);
-    const response = await ofetch<BlockBeatsApiResponse>(`${apiBaseUrl}${channelConfig.endpoint}`, {
+    const rawResponse = await ofetch<unknown>(`${apiBaseUrl}${channelConfig.endpoint}`, {
         query: {
             page: 1,
             size,
@@ -104,7 +104,9 @@ async function handler(ctx: Context): Promise<Data> {
         headers: {
             'api-key': config.blockbeats.apiKey,
         },
+        responseType: 'json',
     });
+    const response = parseResponse(rawResponse);
 
     const apiStatus = response.status ?? response.code;
     const apiMessage = response.message || response.msg;
@@ -148,6 +150,22 @@ function getItems(response: BlockBeatsApiResponse) {
     if (response.data && Array.isArray(response.data.data)) {
         return response.data.data;
     }
+}
+
+function parseResponse(response: unknown): BlockBeatsApiResponse {
+    if (typeof response === 'string') {
+        try {
+            return JSON.parse(response) as BlockBeatsApiResponse;
+        } catch {
+            throw new Error(`Unexpected BlockBeats API response string. Length: ${response.length}`);
+        }
+    }
+
+    if (response && typeof response === 'object') {
+        return response as BlockBeatsApiResponse;
+    }
+
+    throw new Error(`Unexpected BlockBeats API response type: ${typeof response}`);
 }
 
 function parseBlockBeatsDate(value?: string) {

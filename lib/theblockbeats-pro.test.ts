@@ -104,6 +104,46 @@ describe('/theblockbeats/pro/:channel', () => {
         });
     });
 
+    it('supports JSON returned as a string response', async () => {
+        const { default: server } = await import('@/setup.test');
+        setConfig({
+            BLOCKBEATS_API_KEY: 'test-key',
+            REQUEST_RETRY: '0',
+        });
+
+        server.use(
+            http.get('https://api-pro.theblockbeats.info/v1/article', () =>
+                HttpResponse.text(
+                    JSON.stringify({
+                        status: 0,
+                        message: '',
+                        data: {
+                            page: 1,
+                            data: [
+                                {
+                                    id: 125,
+                                    title: 'String response article title',
+                                    content: '&lt;p&gt;String response article body&lt;/p&gt;',
+                                    pic: '',
+                                    link: 'https://m.theblockbeats.info/news/125',
+                                    create_time: '2026-05-09 18:03:00',
+                                },
+                            ],
+                        },
+                    })
+                )
+            )
+        );
+
+        const feed = await route.handler(createCtx('article'));
+        expect(feed.item[0]).toMatchObject({
+            title: 'String response article title',
+            link: 'https://m.theblockbeats.info/news/125',
+            guid: 'theblockbeats-pro-article-125',
+            description: '<p>String response article body</p>',
+        });
+    });
+
     it('builds the newsflash feed and clamps the limit parameter', async () => {
         const { default: server } = await import('@/setup.test');
         setConfig({
