@@ -58,6 +58,7 @@ describe('/panwiki/portal/:order?', () => {
                 const url = new URL(request.url);
                 expect(url.searchParams.get('order')).toBe('dateline');
                 expect(request.headers.get('cookie')).toBe('hH6n_2132_auth=secret');
+                expect(request.headers.get('user-agent')).toBeTruthy();
 
                 return HttpResponse.text(portalHtml, {
                     headers: {
@@ -100,6 +101,24 @@ describe('/panwiki/portal/:order?', () => {
         );
 
         const feed = await route.handler(createCtx(undefined, '1'));
+        expect(feed.item).toHaveLength(1);
+    });
+
+    it('normalizes a copied Cookie header value', async () => {
+        const { default: server } = await import('@/setup.test');
+        setConfig({
+            PANWIKI_COOKIE: 'Cookie: panwiki_auth=secret; panwiki_salt=salt',
+            REQUEST_RETRY: '0',
+        });
+
+        server.use(
+            http.get('https://www.panwiki.com/portal.php', ({ request }) => {
+                expect(request.headers.get('cookie')).toBe('panwiki_auth=secret; panwiki_salt=salt');
+                return HttpResponse.text(portalHtml);
+            })
+        );
+
+        const feed = await route.handler(createCtx('dateline', '1'));
         expect(feed.item).toHaveLength(1);
     });
 

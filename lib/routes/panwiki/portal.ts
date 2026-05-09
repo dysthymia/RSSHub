@@ -55,7 +55,9 @@ export const route: Route = {
 };
 
 async function handler(ctx: Context): Promise<Data> {
-    if (!config.panwiki.cookie) {
+    const cookie = normalizeCookie(config.panwiki.cookie);
+
+    if (!cookie) {
         throw new ConfigNotFoundError('Panwiki cookie is missing. Please set PANWIKI_COOKIE.');
     }
 
@@ -64,8 +66,9 @@ async function handler(ctx: Context): Promise<Data> {
     const currentUrl = buildPortalUrl(order);
     const response = await ofetch<string>(currentUrl, {
         headers: {
-            cookie: config.panwiki.cookie,
+            cookie,
             referer: rootUrl,
+            'user-agent': config.trueUA,
         },
         parseResponse: (text) => text,
     });
@@ -104,6 +107,35 @@ function buildPortalUrl(order: string) {
     const url = new URL('/portal.php', rootUrl);
     url.searchParams.set('order', order);
     return url.href;
+}
+
+function normalizeCookie(cookie?: string) {
+    if (!cookie) {
+        return '';
+    }
+
+    const rawCookie = stripWrappingQuotes(cookie.trim())
+        .replaceAll(String.raw`\r`, '\r')
+        .replaceAll(String.raw`\n`, '\n');
+    const lines = rawCookie
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    const cookieLines = lines.filter((line) => /^cookie\s*:/i.test(line));
+    const values = cookieLines.length > 0 ? cookieLines.map((line) => line.replace(/^cookie\s*:\s*/i, '')) : lines;
+
+    return values
+        .join('; ')
+        .replaceAll(/\s*;\s*/g, '; ')
+        .replaceAll(/;\s*;/g, ';')
+        .trim();
+}
+
+function stripWrappingQuotes(value: string) {
+    const first = value.at(0);
+    const last = value.at(-1);
+
+    return first && first === last && (first === '"' || first === "'") ? value.slice(1, -1) : value;
 }
 
 function isLoginPage($: CheerioAPI) {
