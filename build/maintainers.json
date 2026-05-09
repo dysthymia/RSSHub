@@ -6731,6 +6731,9 @@
   "/panewslab/topic/:id": [
     "nczitzk"
   ],
+  "/panwiki/portal/:order?": [
+    "dysthymia"
+  ],
   "/papers/query/:keyword{.+}?": [
     "Muyun99"
   ],

@@ -95778,6 +95778,67 @@ export default {
     "url": "panewslab.com",
     "lang": "zh-CN"
   },
+  "panwiki": {
+    "routes": {
+      "/portal/:order?": {
+        "path": "/portal/:order?",
+        "categories": [
+          "bbs"
+        ],
+        "view": 0,
+        "example": "/panwiki/portal/dateline",
+        "parameters": {
+          "order": {
+            "description": "排序方式",
+            "options": [
+              {
+                "value": "dateline",
+                "label": "新鲜出炉"
+              },
+              {
+                "value": "heats",
+                "label": "热门主题"
+              },
+              {
+                "value": "replies",
+                "label": "全部主题"
+              },
+              {
+                "value": "",
+                "label": "默认"
+              }
+            ],
+            "default": "dateline"
+          }
+        },
+        "features": {
+          "requireConfig": [
+            {
+              "name": "PANWIKI_COOKIE",
+              "optional": false,
+              "description": "Panwiki logged-in cookie. The site is login-gated, so the cookie must be configured server-side."
+            }
+          ],
+          "requirePuppeteer": false,
+          "antiCrawler": false,
+          "supportBT": false,
+          "supportPodcast": false,
+          "supportScihub": false
+        },
+        "name": "Portal",
+        "maintainers": [
+          "dysthymia"
+        ],
+        "description": "Panwiki portal topics. Requires server-side `PANWIKI_COOKIE` because Panwiki is login-gated.",
+        "location": "portal.ts",
+        "module": () => import('@/routes/panwiki/portal.ts')
+      }
+    },
+    "apiRoutes": {},
+    "name": "Panwiki",
+    "url": "www.panwiki.com",
+    "lang": "zh-CN"
+  },
   "papers": {
     "routes": {
       "/query/:keyword{.+}?": {

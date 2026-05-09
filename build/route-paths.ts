@@ -2196,6 +2196,7 @@ export type RoutePath =
   | `/panewslab/news`
   | `/panewslab/profundity/:category?`
   | `/panewslab/topic/:id`
+  | `/panwiki/portal/:order?`
   | `/papers/category/:id{.+}?`
   | `/papers/query/:keyword{.+}?`
   | `/paradigm/writing`
