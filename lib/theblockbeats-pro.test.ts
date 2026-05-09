@@ -37,15 +37,13 @@ describe('/theblockbeats/pro/:channel', () => {
                 expect(request.headers.get('api-key')).toBe('test-key');
 
                 return HttpResponse.json({
-                    status: 0,
-                    message: '',
+                    page: 1,
                     data: {
-                        page: 1,
                         data: [
                             {
                                 id: 123,
                                 title: 'Article title',
-                                content: '<p>Article body</p>',
+                                content: '&lt;p&gt;Article body&lt;/p&gt;',
                                 pic: 'https://image.blockbeats.cn/article.png',
                                 link: 'https://m.theblockbeats.info/news/123',
                                 create_time: '2026-05-09 18:00:00',
@@ -70,6 +68,40 @@ describe('/theblockbeats/pro/:channel', () => {
         expect(feed.item[0].description).toContain('<p><img src="https://image.blockbeats.cn/article.png"></p>');
         expect(feed.item[0].description).toContain('<p>Article body</p>');
         expect(feed.item[0].pubDate).toBeInstanceOf(Date);
+    });
+
+    it('supports unwrapped API list responses', async () => {
+        const { default: server } = await import('@/setup.test');
+        setConfig({
+            BLOCKBEATS_API_KEY: 'test-key',
+            REQUEST_RETRY: '0',
+        });
+
+        server.use(
+            http.get('https://api-pro.theblockbeats.info/v1/article', () =>
+                HttpResponse.json({
+                    page: 1,
+                    data: [
+                        {
+                            id: 124,
+                            title: 'Unwrapped article title',
+                            content: '&lt;p&gt;Unwrapped article body&lt;/p&gt;',
+                            pic: '',
+                            link: 'https://m.theblockbeats.info/news/124',
+                            create_time: '2026-05-09 18:02:00',
+                        },
+                    ],
+                })
+            )
+        );
+
+        const feed = await route.handler(createCtx('article'));
+        expect(feed.item[0]).toMatchObject({
+            title: 'Unwrapped article title',
+            link: 'https://m.theblockbeats.info/news/124',
+            guid: 'theblockbeats-pro-article-124',
+            description: '<p>Unwrapped article body</p>',
+        });
     });
 
     it('builds the newsflash feed and clamps the limit parameter', async () => {
@@ -116,5 +148,25 @@ describe('/theblockbeats/pro/:channel', () => {
             guid: 'theblockbeats-pro-newsflash-330276',
             description: '<p>Newsflash body</p>',
         });
+    });
+
+    it('reports API errors from wrapped error responses', async () => {
+        const { default: server } = await import('@/setup.test');
+        setConfig({
+            BLOCKBEATS_API_KEY: 'bad-key',
+            REQUEST_RETRY: '0',
+        });
+
+        server.use(
+            http.get('https://api-pro.theblockbeats.info/v1/article', () =>
+                HttpResponse.json({
+                    status: 101,
+                    message: 'Invalid API key',
+                    data: null,
+                })
+            )
+        );
+
+        await expect(route.handler(createCtx('article'))).rejects.toThrow('BlockBeats API error 101: Invalid API key');
     });
 });

@@ -1,3 +1,4 @@
+import { decodeHTML } from 'entities';
 import type { Context } from 'hono';
 
 import { config } from '@/config';
@@ -39,11 +40,12 @@ type BlockBeatsApiItem = {
 };
 
 type BlockBeatsApiResponse = {
-    status: number;
+    status?: number;
+    code?: number;
     message?: string;
-    data?: {
-        data?: BlockBeatsApiItem[];
-    };
+    msg?: string;
+    page?: number;
+    data?: { data?: BlockBeatsApiItem[] } | BlockBeatsApiItem[] | null;
 };
 
 export const route: Route = {
@@ -104,23 +106,30 @@ async function handler(ctx: Context): Promise<Data> {
         },
     });
 
-    if (response.status !== 0) {
-        throw new Error(`BlockBeats API error ${response.status}: ${response.message || 'Unknown error'}`);
+    const apiStatus = response.status ?? response.code;
+    const apiMessage = response.message || response.msg;
+    const list = getItems(response);
+
+    if (typeof apiStatus === 'number' && apiStatus !== 0) {
+        throw new Error(`BlockBeats API error ${apiStatus}: ${apiMessage || 'Unknown error'}`);
     }
 
-    const items =
-        response.data?.data?.map((item): DataItem => {
-            const link = item.link || `${rootUrl}/${channelConfig.itemPath}/${item.id}`;
+    if (!list) {
+        throw new Error(`Unexpected BlockBeats API response. Top-level fields: ${Object.keys(response).join(', ') || 'none'}`);
+    }
 
-            return {
-                title: item.title,
-                link,
-                guid: `theblockbeats-pro-${channel}-${item.id}`,
-                description: renderDescription(item),
-                pubDate: parseBlockBeatsDate(item.create_time),
-                image: item.pic || undefined,
-            };
-        }) ?? [];
+    const items = list.map((item): DataItem => {
+        const link = item.link || `${rootUrl}/${channelConfig.itemPath}/${item.id}`;
+
+        return {
+            title: item.title,
+            link,
+            guid: `theblockbeats-pro-${channel}-${item.id}`,
+            description: renderDescription(item),
+            pubDate: parseBlockBeatsDate(item.create_time),
+            image: item.pic || undefined,
+        };
+    });
 
     return {
         title: `律动 BlockBeats - ${channelConfig.title}`,
@@ -129,6 +138,16 @@ async function handler(ctx: Context): Promise<Data> {
         language: 'zh-CN',
         item: items,
     };
+}
+
+function getItems(response: BlockBeatsApiResponse) {
+    if (Array.isArray(response.data)) {
+        return response.data;
+    }
+
+    if (response.data && Array.isArray(response.data.data)) {
+        return response.data.data;
+    }
 }
 
 function parseBlockBeatsDate(value?: string) {
@@ -146,5 +165,5 @@ function parseBlockBeatsDate(value?: string) {
 function renderDescription(item: BlockBeatsApiItem) {
     const image = item.pic ? `<p><img src="${item.pic}"></p>` : '';
 
-    return `${image}${item.content || ''}`;
+    return `${image}${decodeHTML(item.content || '')}`;
 }
