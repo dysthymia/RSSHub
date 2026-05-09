@@ -8493,6 +8493,9 @@
   "/theblock/category/:category": [
     "pseudoyu"
   ],
+  "/theblockbeats/pro/:channel": [
+    "dysthymia"
+  ],
   "/theblockbeats/:channel?/:original?": [
     "Fatpandac",
     "jameshih",

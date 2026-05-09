@@ -2761,6 +2761,7 @@ export type RoutePath =
   | `/theatlantic/:category`
   | `/theblock/category/:category`
   | `/theblockbeats/:channel?/:original?`
+  | `/theblockbeats/pro/:channel`
   | `/thebrain/blog`
   | `/thecover/channel/:id?`
   | `/thegadgetflow/:category?`

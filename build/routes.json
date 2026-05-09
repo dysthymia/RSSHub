@@ -121637,6 +121637,50 @@
   },
   "theblockbeats": {
     "routes": {
+      "/pro/:channel": {
+        "path": "/pro/:channel",
+        "categories": [
+          "finance"
+        ],
+        "view": 0,
+        "example": "/theblockbeats/pro/newsflash",
+        "parameters": {
+          "channel": {
+            "description": "类型",
+            "options": [
+              {
+                "value": "newsflash",
+                "label": "快讯"
+              },
+              {
+                "value": "article",
+                "label": "文章"
+              }
+            ]
+          }
+        },
+        "features": {
+          "requireConfig": [
+            {
+              "name": "BLOCKBEATS_API_KEY",
+              "optional": false,
+              "description": "BlockBeats API key from https://www.theblockbeats.info/apiDoc."
+            }
+          ],
+          "requirePuppeteer": false,
+          "antiCrawler": false,
+          "supportBT": false,
+          "supportPodcast": false,
+          "supportScihub": false
+        },
+        "name": "Pro API",
+        "maintainers": [
+          "dysthymia"
+        ],
+        "description": "Fetches BlockBeats Pro API data with the server-side `BLOCKBEATS_API_KEY` and outputs normal RSSHub RSS feeds.",
+        "location": "pro.ts",
+        "module": "() => import('@/routes/theblockbeats/pro.ts')"
+      },
       "/:channel?/:original?": {
         "path": "/:channel?/:original?",
         "categories": [
