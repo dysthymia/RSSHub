@@ -88,7 +88,7 @@ describe('/panwiki/portal/:order?', () => {
     it('defaults to dateline and clamps limit', async () => {
         const { default: server } = await import('@/setup.test');
         setConfig({
-            PANWIKI_COOKIE: 'cookie=value',
+            PANWIKI_COOKIE: 'hH6n_2132_auth=secret',
             REQUEST_RETRY: '0',
         });
 
@@ -122,14 +122,61 @@ describe('/panwiki/portal/:order?', () => {
         expect(feed.item).toHaveLength(1);
     });
 
+    it('normalizes a copied curl Cookie header', async () => {
+        const { default: server } = await import('@/setup.test');
+        setConfig({
+            PANWIKI_COOKIE: "curl 'https://www.panwiki.com/portal.php?order=dateline' -H 'accept: text/html' -H 'Cookie: hH6n_2132_auth=secret; hH6n_2132_saltkey=salt'",
+            REQUEST_RETRY: '0',
+        });
+
+        server.use(
+            http.get('https://www.panwiki.com/portal.php', ({ request }) => {
+                expect(request.headers.get('cookie')).toBe('hH6n_2132_auth=secret; hH6n_2132_saltkey=salt');
+                return HttpResponse.text(portalHtml);
+            })
+        );
+
+        const feed = await route.handler(createCtx('dateline', '1'));
+        expect(feed.item).toHaveLength(1);
+    });
+
+    it('normalizes copied Set-Cookie lines', async () => {
+        const { default: server } = await import('@/setup.test');
+        setConfig({
+            PANWIKI_COOKIE: ['set-cookie: hH6n_2132_saltkey=salt; expires=Mon, 08-Jun-2026 14:21:22 GMT; path=/; secure', 'set-cookie: hH6n_2132_auth=secret; expires=Mon, 08-Jun-2026 14:21:22 GMT; path=/; secure; HttpOnly'].join(
+                String.raw`\n`
+            ),
+            REQUEST_RETRY: '0',
+        });
+
+        server.use(
+            http.get('https://www.panwiki.com/portal.php', ({ request }) => {
+                expect(request.headers.get('cookie')).toBe('hH6n_2132_saltkey=salt; hH6n_2132_auth=secret');
+                return HttpResponse.text(portalHtml);
+            })
+        );
+
+        const feed = await route.handler(createCtx('dateline', '1'));
+        expect(feed.item).toHaveLength(1);
+    });
+
     it('reports missing cookie', async () => {
         await expect(route.handler(createCtx('dateline'))).rejects.toThrow('Panwiki cookie is missing');
+    });
+
+    it('reports incomplete cookie without auth cookie', async () => {
+        setConfig({
+            PANWIKI_COOKIE: 'hH6n_2132_saltkey=salt',
+            REQUEST_RETRY: '0',
+        });
+
+        await expect(route.handler(createCtx('dateline'))).rejects.toThrow('missing Discuz auth cookie');
     });
 
     it('reports invalid or expired cookie from login page', async () => {
         const { default: server } = await import('@/setup.test');
         setConfig({
-            PANWIKI_COOKIE: 'expired=1',
+            PANWIKI_COOKIE: 'hH6n_2132_auth=expired',
             REQUEST_RETRY: '0',
         });
 

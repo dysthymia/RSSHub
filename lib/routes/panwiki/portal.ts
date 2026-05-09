@@ -16,6 +16,7 @@ const defaultLimit = 20;
 const maxLimit = 50;
 const validOrders = new Set(['', 'dateline', 'heats', 'replies']);
 const dateRegex = /\b\d{4}-\d{1,2}-\d{1,2}\b/;
+const browserUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_6_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36';
 
 export const route: Route = {
     path: '/portal/:order?',
@@ -61,6 +62,11 @@ async function handler(ctx: Context): Promise<Data> {
         throw new ConfigNotFoundError('Panwiki cookie is missing. Please set PANWIKI_COOKIE.');
     }
 
+    const cookieDiagnostics = getCookieDiagnostics(cookie);
+    if (!cookieDiagnostics.hasAuthCookie) {
+        throw new Error(`Panwiki cookie is incomplete: missing Discuz auth cookie. ${cookieDiagnostics.message}`);
+    }
+
     const order = normalizeOrder(ctx.req.param('order'));
     const limit = Math.min(Math.max(Number.parseInt(ctx.req.query('limit') ?? `${defaultLimit}`, 10) || defaultLimit, 1), maxLimit);
     const currentUrl = buildPortalUrl(order);
@@ -70,14 +76,14 @@ async function handler(ctx: Context): Promise<Data> {
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
             cookie,
             referer: rootUrl,
-            'user-agent': config.ua,
+            'user-agent': browserUserAgent,
         },
         parseResponse: (text) => text,
     });
     const $ = load(response);
 
     if (isLoginPage($)) {
-        throw new Error('Panwiki cookie is invalid or expired. Please update PANWIKI_COOKIE.');
+        throw new Error(`Panwiki cookie is invalid or expired. ${cookieDiagnostics.message}`);
     }
 
     const items = parsePortalItems($, limit);
@@ -119,18 +125,79 @@ function normalizeCookie(cookie?: string) {
     const rawCookie = stripWrappingQuotes(cookie.trim())
         .replaceAll(String.raw`\r`, '\r')
         .replaceAll(String.raw`\n`, '\n');
+    const curlCookieValues = extractCurlHeaderValues(rawCookie, 'cookie');
+
+    if (curlCookieValues.length > 0) {
+        return normalizeCookieValue(curlCookieValues.join('; '));
+    }
+
     const lines = rawCookie
         .split(/\r?\n/)
-        .map((line) => line.trim())
+        .map((line) => normalizeCopiedHeaderLine(line))
         .filter(Boolean);
     const cookieLines = lines.filter((line) => /^cookie\s*:/i.test(line));
-    const values = cookieLines.length > 0 ? cookieLines.map((line) => line.replace(/^cookie\s*:\s*/i, '')) : lines;
 
-    return values
-        .join('; ')
+    if (cookieLines.length > 0) {
+        return normalizeCookieValue(cookieLines.map((line) => line.replace(/^cookie\s*:\s*/i, '')).join('; '));
+    }
+
+    const setCookieLines = lines.filter((line) => /^set-cookie\s*:/i.test(line));
+
+    if (setCookieLines.length > 0) {
+        return normalizeCookieValue(
+            setCookieLines
+                .map((line) => line.replace(/^set-cookie\s*:\s*/i, '').split(';')[0])
+                .filter((line) => line.includes('='))
+                .join('; ')
+        );
+    }
+
+    return normalizeCookieValue(lines.join('; '));
+}
+
+function normalizeCookieValue(cookie: string) {
+    return cookie
         .replaceAll(/\s*;\s*/g, '; ')
         .replaceAll(/;\s*;/g, ';')
         .trim();
+}
+
+function normalizeCopiedHeaderLine(line: string) {
+    return stripWrappingQuotes(
+        line
+            .trim()
+            .replace(/\\$/, '')
+            .replace(/^(?:-H|--header)\s+/i, '')
+            .trim()
+    );
+}
+
+function extractCurlHeaderValues(rawCookie: string, headerName: string) {
+    const values: string[] = [];
+    const headerRegex = /(?:^|\s)(?:-H|--header)\s+(["'])(.*?)\1/gis;
+
+    for (const match of rawCookie.matchAll(headerRegex)) {
+        const header = match[2].trim();
+
+        if (header.toLowerCase().startsWith(`${headerName.toLowerCase()}:`)) {
+            values.push(header.replace(new RegExp(`^${headerName}\\s*:\\s*`, 'i'), ''));
+        }
+    }
+
+    return values;
+}
+
+function getCookieDiagnostics(cookie: string) {
+    const cookieNames = cookie
+        .split(';')
+        .map((part) => part.trim().split('=')[0])
+        .filter(Boolean);
+    const hasAuthCookie = cookieNames.some((name) => name.endsWith('_auth'));
+
+    return {
+        hasAuthCookie,
+        message: `Cookie diagnostics: ${cookieNames.length} cookie(s), Discuz auth cookie ${hasAuthCookie ? 'present' : 'missing'}. Copy the Request Headers Cookie value from a logged-in Panwiki portal page, not response Set-Cookie.`,
+    };
 }
 
 function stripWrappingQuotes(value: string) {
