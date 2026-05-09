@@ -66,9 +66,11 @@ async function handler(ctx: Context): Promise<Data> {
     const currentUrl = buildPortalUrl(order);
     const response = await ofetch<string>(currentUrl, {
         headers: {
+            accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
             cookie,
             referer: rootUrl,
-            'user-agent': config.trueUA,
+            'user-agent': config.ua,
         },
         parseResponse: (text) => text,
     });
