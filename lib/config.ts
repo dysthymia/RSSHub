@@ -87,6 +87,7 @@ type ConfigEnvKeys =
     | 'BILIBILI_EXCLUDE_SUBTITLES'
     | 'BITBUCKET_USERNAME'
     | 'BITBUCKET_PASSWORD'
+    | 'BLOCKBEATS_API_KEY'
     | 'BTBYR_HOST'
     | 'BTBYR_COOKIE'
     | 'BUPT_PORTAL_COOKIE'
@@ -365,6 +366,9 @@ export type Config = {
     bitbucket: {
         username?: string;
         password?: string;
+    };
+    blockbeats: {
+        apiKey?: string;
     };
     btbyr: {
         host?: string;
@@ -867,6 +871,9 @@ const calculateValue = () => {
         bitbucket: {
             username: envs.BITBUCKET_USERNAME,
             password: envs.BITBUCKET_PASSWORD,
+        },
+        blockbeats: {
+            apiKey: envs.BLOCKBEATS_API_KEY,
         },
         btbyr: {
             host: envs.BTBYR_HOST,
