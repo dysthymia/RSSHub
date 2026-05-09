@@ -1,5 +1,5 @@
-import { decodeHTML } from 'entities';
 import type { Context } from 'hono';
+import type { Item } from 'rss-parser';
 
 import { config } from '@/config';
 import ConfigNotFoundError from '@/errors/types/config-not-found';
@@ -7,6 +7,7 @@ import type { Data, DataItem, Route } from '@/types';
 import { ViewType } from '@/types';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
+import rssParser from '@/utils/rss-parser';
 
 const rootUrl = 'https://www.theblockbeats.info';
 const apiBaseUrl = 'https://api-pro.theblockbeats.info';
@@ -16,36 +17,23 @@ const maxSize = 50;
 const channels = {
     newsflash: {
         title: '快讯',
-        endpoint: '/v1/newsflash',
+        endpoint: '/v1/rss/newsflash',
         link: `${rootUrl}/newsflash`,
-        itemPath: 'flash',
     },
     article: {
         title: '文章',
-        endpoint: '/v1/article',
+        endpoint: '/v1/rss/article',
         link: `${rootUrl}/article`,
-        itemPath: 'news',
     },
 } as const;
 
 type Channel = keyof typeof channels;
-
-type BlockBeatsApiItem = {
-    id: number;
-    title: string;
-    content?: string;
-    pic?: string;
-    link?: string;
-    create_time?: string;
-};
 
 type BlockBeatsApiResponse = {
     status?: number;
     code?: number;
     message?: string;
     msg?: string;
-    page?: number;
-    data?: { data?: BlockBeatsApiItem[] } | BlockBeatsApiItem[] | null;
 };
 
 export const route: Route = {
@@ -95,93 +83,63 @@ async function handler(ctx: Context): Promise<Data> {
     }
 
     const size = Math.min(Number.parseInt(ctx.req.query('limit') || `${defaultSize}`, 10) || defaultSize, maxSize);
-    const rawResponse = await ofetch<unknown>(`${apiBaseUrl}${channelConfig.endpoint}`, {
+    const rawResponse = await ofetch<string>(`${apiBaseUrl}${channelConfig.endpoint}`, {
         query: {
             page: 1,
             size,
-            lang: 'cn',
         },
         headers: {
             'api-key': config.blockbeats.apiKey,
         },
-        responseType: 'json',
+        parseResponse: (text) => text,
     });
-    const response = parseResponse(rawResponse);
-
-    const apiStatus = response.status ?? response.code;
-    const apiMessage = response.message || response.msg;
-    const list = getItems(response);
-
-    if (typeof apiStatus === 'number' && apiStatus !== 0) {
-        throw new Error(`BlockBeats API error ${apiStatus}: ${apiMessage || 'Unknown error'}`);
-    }
-
-    if (!list) {
-        throw new Error(`Unexpected BlockBeats API response. Top-level fields: ${Object.keys(response).join(', ') || 'none'}`);
-    }
-
-    const items = list.map((item): DataItem => {
-        const link = item.link || `${rootUrl}/${channelConfig.itemPath}/${item.id}`;
-
-        return {
-            title: item.title,
-            link,
-            guid: `theblockbeats-pro-${channel}-${item.id}`,
-            description: renderDescription(item),
-            pubDate: parseBlockBeatsDate(item.create_time),
-            image: item.pic || undefined,
-        };
-    });
+    const xml = assertXmlResponse(rawResponse);
+    const feed = await rssParser.parseString(xml);
+    const items = feed.items.map((item) => mapRssItem(item, channel));
 
     return {
-        title: `律动 BlockBeats - ${channelConfig.title}`,
-        link: channelConfig.link,
-        description: `律动 BlockBeats ${channelConfig.title}`,
+        title: feed.title || `律动 BlockBeats - ${channelConfig.title}`,
+        link: feed.link || channelConfig.link,
+        feedLink: `${apiBaseUrl}${channelConfig.endpoint}`,
+        description: feed.description || `律动 BlockBeats ${channelConfig.title}`,
         language: 'zh-CN',
         item: items,
     };
 }
 
-function getItems(response: BlockBeatsApiResponse) {
-    if (Array.isArray(response.data)) {
-        return response.data;
+function assertXmlResponse(response: string) {
+    const trimmed = response.trim();
+
+    if (trimmed.startsWith('{')) {
+        const payload = JSON.parse(trimmed) as BlockBeatsApiResponse;
+        const apiStatus = payload.status ?? payload.code;
+        const apiMessage = payload.message || payload.msg;
+        throw new Error(`BlockBeats API error ${apiStatus ?? 'unknown'}: ${apiMessage || 'Unknown error'}`);
     }
 
-    if (response.data && Array.isArray(response.data.data)) {
-        return response.data.data;
+    if (!trimmed.startsWith('<')) {
+        throw new Error(`Unexpected BlockBeats API response string. Length: ${response.length}`);
     }
+
+    return response;
 }
 
-function parseResponse(response: unknown): BlockBeatsApiResponse {
-    if (typeof response === 'string') {
-        try {
-            return JSON.parse(response) as BlockBeatsApiResponse;
-        } catch {
-            throw new Error(`Unexpected BlockBeats API response string. Length: ${response.length}`);
-        }
-    }
+function mapRssItem(item: Item, channel: Channel): DataItem {
+    const link = item.link;
+    const description = item.content || item.summary || item.contentSnippet || '';
+    const guid = item.guid || link || `theblockbeats-pro-${channel}-${item.title}`;
 
-    if (response && typeof response === 'object') {
-        return response as BlockBeatsApiResponse;
-    }
-
-    throw new Error(`Unexpected BlockBeats API response type: ${typeof response}`);
-}
-
-function parseBlockBeatsDate(value?: string) {
-    if (!value) {
-        return;
-    }
-
-    if (/^\d{10}$/.test(value)) {
-        return parseDate(value, 'X');
-    }
-
-    return parseDate(value);
-}
-
-function renderDescription(item: BlockBeatsApiItem) {
-    const image = item.pic ? `<p><img src="${item.pic}"></p>` : '';
-
-    return `${image}${decodeHTML(item.content || '')}`;
+    return {
+        title: item.title || link || '',
+        link,
+        guid,
+        description,
+        pubDate: item.isoDate ? parseDate(item.isoDate) : item.pubDate ? parseDate(item.pubDate) : undefined,
+        author: item.creator,
+        category: item.categories,
+        image: item.enclosure?.url,
+        enclosure_url: item.enclosure?.url,
+        enclosure_type: item.enclosure?.type,
+        enclosure_length: item.enclosure?.length,
+    };
 }
