@@ -425,9 +425,10 @@ function stripWrappingQuotes(value: string) {
 }
 
 function isLoginPage($: CheerioAPI) {
-    const pageText = normalizeText(`${$('title').text()} ${$('body').text()}`);
+    const title = normalizeText($('title').text());
+    const scriptText = $('script').text();
 
-    return pageText.includes('登录 Panwiki') || pageText.includes('登录发现更多内容') || pageText.includes('已经开启登录可见');
+    return title.startsWith('登录') || $('form[id^="loginform_"]').length > 0 || /\bdiscuz_uid\s*=\s*['"]0['"]/.test(scriptText);
 }
 
 function parsePortalItems($: CheerioAPI, limit: number) {

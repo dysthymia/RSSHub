@@ -18,6 +18,7 @@ const portalHtml = `<!doctype html>
 <html>
   <head><title>Panwiki - （原我的小站论坛）</title></head>
   <body>
+    <div class="template-fragment">登录发现更多内容</div>
     <div class="topic-card">
       <a href="forum.php?mod=viewthread&tid=200091"><img src="data/attachment/forum/cover.jpg"></a>
       <h2><a href="forum.php?mod=viewthread&tid=200091" style="font-size:16px;">杨照－古代中国的留言：先秦经典八部【完结】</a></h2>
