@@ -95815,8 +95815,18 @@
           "requireConfig": [
             {
               "name": "PANWIKI_COOKIE",
-              "optional": false,
-              "description": "Panwiki logged-in cookie. The site is login-gated, so the cookie must be configured server-side."
+              "optional": true,
+              "description": "Panwiki logged-in cookie. Preferred when available."
+            },
+            {
+              "name": "PANWIKI_USERNAME",
+              "optional": true,
+              "description": "Panwiki username. Used to login when PANWIKI_COOKIE is missing or invalid."
+            },
+            {
+              "name": "PANWIKI_PASSWORD",
+              "optional": true,
+              "description": "Panwiki password. Used to login when PANWIKI_COOKIE is missing or invalid."
             }
           ],
           "requirePuppeteer": false,
@@ -95829,7 +95839,7 @@
         "maintainers": [
           "dysthymia"
         ],
-        "description": "Panwiki portal topics. Requires server-side `PANWIKI_COOKIE` because Panwiki is login-gated.",
+        "description": "Panwiki portal topics. Panwiki is login-gated; configure server-side `PANWIKI_COOKIE`, or `PANWIKI_USERNAME` and `PANWIKI_PASSWORD` for automatic login fallback.",
         "location": "portal.ts",
         "module": "() => import('@/routes/panwiki/portal.ts')"
       }
