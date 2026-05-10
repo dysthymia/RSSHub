@@ -216,6 +216,7 @@ describe('/panwiki/portal/:order?', () => {
 
                 expect(url.searchParams.get('loginsubmit')).toBe('yes');
                 expect(url.searchParams.get('loginhash')).toBe('LKXbk');
+                expect(url.searchParams.get('inajax')).toBe('1');
                 expect(request.headers.get('cookie')).toContain('hH6n_2132_saltkey=salt');
                 expect(request.headers.get('cookie')).toContain('hH6n_2132_sid=sid');
                 expect(body.get('formhash')).toBe('40431143');

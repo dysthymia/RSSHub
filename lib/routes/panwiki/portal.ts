@@ -186,7 +186,9 @@ async function login() {
         cookietime: '2592000',
         loginsubmit: 'true',
     });
-    const submitResponse = await ofetch.raw<string>(new URL(action, rootUrl).href, {
+    const submitUrl = new URL(action, rootUrl);
+    submitUrl.searchParams.set('inajax', '1');
+    const submitResponse = await ofetch.raw<string>(submitUrl.href, {
         method: 'POST',
         headers: {
             ...getHtmlHeaders(loginUrl),
@@ -325,15 +327,18 @@ function extractCurlHeaderValues(rawCookie: string, headerName: string) {
 }
 
 function getCookieDiagnostics(cookie: string) {
-    const cookieNames = cookie
+    const cookies = cookie
         .split(';')
-        .map((part) => part.trim().split('=')[0])
-        .filter(Boolean);
-    const hasAuthCookie = cookieNames.some((name) => name.endsWith('_auth'));
+        .map((part) => {
+            const [name, ...valueParts] = part.trim().split('=');
+            return { name, value: valueParts.join('=') };
+        })
+        .filter(({ name }) => Boolean(name));
+    const hasAuthCookie = cookies.some(({ name, value }) => name.endsWith('_auth') && !name.endsWith('_invite_auth') && value !== 'deleted');
 
     return {
         hasAuthCookie,
-        message: `Cookie diagnostics: ${cookieNames.length} cookie(s), Discuz auth cookie ${hasAuthCookie ? 'present' : 'missing'}. Copy the Request Headers Cookie value from a logged-in Panwiki portal page, not response Set-Cookie.`,
+        message: `Cookie diagnostics: ${cookies.length} cookie(s), Discuz auth cookie ${hasAuthCookie ? 'present' : 'missing'}. Copy the Request Headers Cookie value from a logged-in Panwiki portal page, not response Set-Cookie.`,
     };
 }
 
