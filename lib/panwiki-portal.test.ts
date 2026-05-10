@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { setConfig } from '@/config';
 import { route } from '@/routes/panwiki/portal';
+import cache from '@/utils/cache';
 
 const createCtx = (order?: string, limit?: string) =>
     ({
@@ -38,11 +39,26 @@ const portalHtml = `<!doctype html>
   </body>
 </html>`;
 
+const loginHtml = `<!doctype html>
+<html>
+  <body>
+    <form id="loginform_LKXbk" action="member.php?mod=logging&action=login&loginsubmit=yes&loginhash=LKXbk">
+      <input type="hidden" name="formhash" value="40431143">
+      <input type="hidden" name="referer" value="https://www.panwiki.com/./">
+      <input type="text" name="username">
+      <input type="password" name="password">
+    </form>
+  </body>
+</html>`;
+
 afterEach(() => {
     setConfig({
         PANWIKI_COOKIE: '',
+        PANWIKI_PASSWORD: '',
+        PANWIKI_USERNAME: '',
         REQUEST_RETRY: '',
     });
+    cache.set('panwiki:login-cookie', '', 1);
 });
 
 describe('/panwiki/portal/:order?', () => {
@@ -160,8 +176,69 @@ describe('/panwiki/portal/:order?', () => {
         expect(feed.item).toHaveLength(1);
     });
 
-    it('reports missing cookie', async () => {
-        await expect(route.handler(createCtx('dateline'))).rejects.toThrow('Panwiki cookie is missing');
+    it('logs in with username and password when the configured cookie is expired', async () => {
+        const { default: server } = await import('@/setup.test');
+        setConfig({
+            PANWIKI_COOKIE: 'hH6n_2132_auth=expired',
+            PANWIKI_USERNAME: 'rsshub-user',
+            PANWIKI_PASSWORD: 'rsshub-password',
+            REQUEST_RETRY: '0',
+        });
+
+        let portalRequests = 0;
+
+        server.use(
+            http.get('https://www.panwiki.com/portal.php', ({ request }) => {
+                portalRequests++;
+
+                if (portalRequests === 1) {
+                    expect(request.headers.get('cookie')).toBe('hH6n_2132_auth=expired');
+                    return HttpResponse.text('<title>登录 Panwiki</title><body>登录发现更多内容</body>');
+                }
+
+                expect(request.headers.get('cookie')).toContain('hH6n_2132_auth=secret');
+                return HttpResponse.text(portalHtml);
+            }),
+            http.get('https://www.panwiki.com/member.php', ({ request }) => {
+                const url = new URL(request.url);
+                expect(url.searchParams.get('mod')).toBe('logging');
+                expect(url.searchParams.get('action')).toBe('login');
+
+                return HttpResponse.text(loginHtml, {
+                    headers: {
+                        'set-cookie': 'hH6n_2132_saltkey=salt; path=/, hH6n_2132_sid=sid; path=/',
+                    },
+                });
+            }),
+            http.post('https://www.panwiki.com/member.php', async ({ request }) => {
+                const url = new URL(request.url);
+                const body = new URLSearchParams(await request.text());
+
+                expect(url.searchParams.get('loginsubmit')).toBe('yes');
+                expect(url.searchParams.get('loginhash')).toBe('LKXbk');
+                expect(request.headers.get('cookie')).toContain('hH6n_2132_saltkey=salt');
+                expect(request.headers.get('cookie')).toContain('hH6n_2132_sid=sid');
+                expect(body.get('formhash')).toBe('40431143');
+                expect(body.get('username')).toBe('rsshub-user');
+                expect(body.get('password')).toBe('rsshub-password');
+                expect(body.get('cookietime')).toBe('2592000');
+
+                return HttpResponse.text('<body>欢迎回来</body>', {
+                    headers: {
+                        'set-cookie': 'hH6n_2132_auth=secret; path=/',
+                    },
+                });
+            })
+        );
+
+        const feed = await route.handler(createCtx('dateline', '1'));
+
+        expect(portalRequests).toBe(2);
+        expect(feed.item).toHaveLength(1);
+    });
+
+    it('reports missing authentication config', async () => {
+        await expect(route.handler(createCtx('dateline'))).rejects.toThrow('Panwiki auth is missing');
     });
 
     it('reports incomplete cookie without auth cookie', async () => {

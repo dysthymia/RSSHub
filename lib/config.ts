@@ -171,6 +171,8 @@ type ConfigEnvKeys =
     | 'NHENTAI_PASSWORD'
     | 'NOTION_TOKEN'
     | 'PANWIKI_COOKIE'
+    | 'PANWIKI_USERNAME'
+    | 'PANWIKI_PASSWORD'
     | 'PATREON_SESSION_ID'
     | 'PIANYUAN_COOKIE'
     | 'PIXABAY_KEY'
@@ -563,6 +565,8 @@ export type Config = {
     };
     panwiki: {
         cookie?: string;
+        username?: string;
+        password?: string;
     };
     pianyuan: {
         cookie?: string;
@@ -1071,6 +1075,8 @@ const calculateValue = () => {
         },
         panwiki: {
             cookie: envs.PANWIKI_COOKIE,
+            username: envs.PANWIKI_USERNAME,
+            password: envs.PANWIKI_PASSWORD,
         },
         pianyuan: {
             cookie: envs.PIANYUAN_COOKIE,
