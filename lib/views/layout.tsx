@@ -1,9 +1,14 @@
 import type { FC } from 'hono/jsx';
 
-export const Layout: FC = (props) => (
+type LayoutProps = {
+    children?: any;
+    title?: string;
+};
+
+export const Layout: FC<LayoutProps> = (props) => (
     <html>
         <head>
-            <title>Welcome to RSSHub!</title>
+            <title>{props.title || 'Welcome to RSSHub!'}</title>
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
                 {`

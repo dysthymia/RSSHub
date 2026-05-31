@@ -4,6 +4,8 @@ import { jsxRenderer } from 'hono/jsx-renderer';
 import { trimTrailingSlash } from 'hono/trailing-slash';
 
 import api from '@/api';
+import dashboard from '@/dashboard';
+import dashboardApi from '@/dashboard/api';
 import { errorHandler, notFoundHandler } from '@/errors';
 import accessControl from '@/middleware/access-control';
 import antiHotlink from '@/middleware/anti-hotlink';
@@ -46,6 +48,8 @@ app.use(antiHotlink);
 app.use(parameter);
 app.use(cache);
 
+app.route('/dashboard', dashboard);
+app.route('/api/dashboard', dashboardApi);
 app.route('/', registry);
 app.route('/api', api);
 
