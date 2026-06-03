@@ -1674,6 +1674,9 @@
   "/chnmuseum/zx/xwzt": [
     "ShabbyWhineYear"
   ],
+  "/chnmuseum/zl/:type?/:subType?": [
+    "magazian"
+  ],
   "/chocolatey/packages/:id": [
     "nczitzk"
   ],
@@ -2580,6 +2583,9 @@
   "/douyu/post/:id": [
     "nczitzk"
   ],
+  "/dpm/exhibitions/:type?": [
+    "magazian"
+  ],
   "/dribbble/keyword/:keyword": [
     "DIYgod",
     "loganrockmore"
@@ -3443,6 +3449,9 @@
   ],
   "/gf-cn/news/:category?": [
     "nczitzk"
+  ],
+  "/gigazine/en": [
+    "chansantheman"
   ],
   "/gihyo/list/group/:id": [
     "masakichi"
@@ -4413,6 +4422,9 @@
   "/huitun/xiaohongshu/:user_id": [
     "Skylwn"
   ],
+  "/humanlayer/blog": [
+    "zj1123581321"
+  ],
   "/hunanpea/rsks/:guid": [
     "TonyRL"
   ],
@@ -4780,6 +4792,9 @@
   ],
   "/ithome/zt/:id?": [
     "nczitzk"
+  ],
+  "/itsec/news": [
+    "ch3n4y"
   ],
   "/iwara/users/:username/:type?": [
     "Fatpandac"
@@ -5180,6 +5195,9 @@
   ],
   "/kisskiss/blog/:category?": [
     "keocheung"
+  ],
+  "/kleinanzeigen/search/:routeParams": [
+    "LunyaaDev"
   ],
   "/komiic/comic/:id": [
     "NekoAria"
@@ -6449,32 +6467,38 @@
   "/nyaa/search/:query?": [
     "Lava-Swimmer",
     "noname1776",
-    "camera-2018"
+    "camera-2018",
+    "Q16KBreak"
   ],
   "/nyaa/user/:username?": [
     "Lava-Swimmer",
     "noname1776",
-    "camera-2018"
+    "camera-2018",
+    "Q16KBreak"
   ],
   "/nyaa/user/:username/search/:query?": [
     "Lava-Swimmer",
     "noname1776",
-    "camera-2018"
+    "camera-2018",
+    "Q16KBreak"
   ],
   "/nyaa/sukebei/search/:query?": [
     "Lava-Swimmer",
     "noname1776",
-    "camera-2018"
+    "camera-2018",
+    "Q16KBreak"
   ],
   "/nyaa/sukebei/user/:username?": [
     "Lava-Swimmer",
     "noname1776",
-    "camera-2018"
+    "camera-2018",
+    "Q16KBreak"
   ],
   "/nyaa/sukebei/user/:username/search/:query?": [
     "Lava-Swimmer",
     "noname1776",
-    "camera-2018"
+    "camera-2018",
+    "Q16KBreak"
   ],
   "/nyc/mayors-office-news/:types?/:categories?": [
     "hkamran80"
@@ -6512,6 +6536,9 @@
     "dzx-dzx"
   ],
   "/obsidian/plugins": [
+    "DIYgod"
+  ],
+  "/obsidian/themes": [
     "DIYgod"
   ],
   "/obsidian/publish/:id": [
@@ -7754,6 +7781,15 @@
   "/sfacg/novel/chapter/:id": [
     "keocheung"
   ],
+  "/shanghaimuseum/information/news/:type?": [
+    "magazian"
+  ],
+  "/shanghaimuseum/display/offline-exhibit/:type?": [
+    "magazian"
+  ],
+  "/shanximuseum/exhibition/temporary/:type?": [
+    "magazian"
+  ],
   "/shcstheatre/programs": [
     "fuzy112"
   ],
@@ -7892,6 +7928,9 @@
   ],
   "/sjtu/tongqu/:type?": [
     "SeanChao"
+  ],
+  "/sjtu/cs/xshd": [
+    "BeaCox"
   ],
   "/sjtu/gs/:type/:num?": [
     "dzx-dzx"

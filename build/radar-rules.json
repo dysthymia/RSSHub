@@ -11357,6 +11357,16 @@
         ],
         "target": "/chnmuseum/zx/xwzt"
       }
+    ],
+    "www": [
+      {
+        "title": "Exhibitions",
+        "docs": "https://docs.rsshub.app/routes/travel",
+        "source": [
+          "/zl/"
+        ],
+        "target": "/chnmuseum/zl"
+      }
     ]
   },
   "chocolatey.org": {
@@ -15301,6 +15311,19 @@
       }
     ]
   },
+  "dpm.org.cn": {
+    "_name": "The Palace Museum",
+    "www": [
+      {
+        "title": "Current Exhibitions",
+        "docs": "https://docs.rsshub.app/routes/travel",
+        "source": [
+          "/classify/exhibition.html"
+        ],
+        "target": "/dpm/exhibitions"
+      }
+    ]
+  },
   "dribbble.com": {
     "_name": "Dribbble",
     ".": [
@@ -18315,6 +18338,20 @@
           "/"
         ],
         "target": "/gf-cn/news/:category?"
+      }
+    ]
+  },
+  "gigazine.net": {
+    "_name": "GIGAZINE",
+    ".": [
+      {
+        "title": "English News",
+        "docs": "https://docs.rsshub.app/routes/new-media",
+        "source": [
+          "/gsc_news/en/",
+          "/gsc_news/en"
+        ],
+        "target": "/gigazine/en"
       }
     ]
   },
@@ -23188,6 +23225,19 @@
       }
     ]
   },
+  "humanlayer.dev": {
+    "_name": "HumanLayer",
+    "www": [
+      {
+        "title": "Blog",
+        "docs": "https://docs.rsshub.app/routes/blog",
+        "source": [
+          "/blog"
+        ],
+        "target": "/humanlayer/humanlayer/blog"
+      }
+    ]
+  },
   "hunanpea.com": {
     "_name": "湖南人事考试网",
     "rsks": [
@@ -25599,6 +25649,20 @@
           "/:category/feeds"
         ],
         "target": "/ithome/tw/feeds/:category"
+      }
+    ]
+  },
+  "itsec.gov.cn": {
+    "_name": "中国信息安全测评中心",
+    "www": [
+      {
+        "title": "新闻发布",
+        "docs": "https://docs.rsshub.app/routes/government",
+        "source": [
+          "/zxxw/index.html",
+          "/zxxw/"
+        ],
+        "target": "/itsec/news"
       }
     ]
   },
@@ -41159,6 +41223,40 @@
       }
     ]
   },
+  "shanghaimuseum.net": {
+    "_name": "Shanghai Museum",
+    "www": [
+      {
+        "title": "News & Announcements",
+        "docs": "https://docs.rsshub.app/routes/travel",
+        "source": [
+          "/mu/frontend/pg/infomation/news"
+        ],
+        "target": "/shanghaimuseum/information/news"
+      },
+      {
+        "title": "Special Exhibitions",
+        "docs": "https://docs.rsshub.app/routes/travel",
+        "source": [
+          "/mu/frontend/pg/display/offline-exhibit"
+        ],
+        "target": "/shanghaimuseum/display/offline-exhibit"
+      }
+    ]
+  },
+  "shanximuseum.com.cn": {
+    "_name": "Shanxi Museum",
+    "www": [
+      {
+        "title": "Temporary Exhibitions",
+        "docs": "https://docs.rsshub.app/routes/travel",
+        "source": [
+          "/sx/exhibition/temporary.html"
+        ],
+        "target": "/shanximuseum/exhibition/temporary"
+      }
+    ]
+  },
   "shcstheatre.com": {
     "_name": "上海文化广场",
     "www": [
@@ -42164,6 +42262,16 @@
   },
   "sjtu.edu.cn": {
     "_name": "上海交通大学",
+    "www.cs": [
+      {
+        "title": "计算机学院 - 学术活动",
+        "docs": "https://docs.rsshub.app/routes/university",
+        "source": [
+          "/xshd.html"
+        ],
+        "target": "/sjtu/cs/xshd"
+      }
+    ],
     "gs": [
       {
         "title": "研究生通知公告",

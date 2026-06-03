@@ -551,6 +551,7 @@ export type RoutePath =
   | `/chinawriter/:id{.+}?`
   | `/chiphell/portal/:catId?`
   | `/chlinlearn/daily-blog`
+  | `/chnmuseum/zl/:type?/:subType?`
   | `/chnmuseum/zx/xingnew`
   | `/chnmuseum/zx/xwzt`
   | `/chocolatey/packages/:id`
@@ -855,6 +856,7 @@ export type RoutePath =
   | `/douyu/group/:id/:sort?`
   | `/douyu/post/:id`
   | `/douyu/room/:id`
+  | `/dpm/exhibitions/:type?`
   | `/dribbble/keyword/:keyword`
   | `/dribbble/popular/:timeframe?`
   | `/dribbble/user/:name`
@@ -1116,6 +1118,7 @@ export type RoutePath =
   | `/getitfree/:filter{.+}?`
   | `/gettr/user/:id`
   | `/gf-cn/news/:category?`
+  | `/gigazine/en`
   | `/gihyo/list/group/:id`
   | `/gisreportsonline/:path{.*}`
   | `/gitcode/commits/:owner/:repo/:branch?`
@@ -1445,6 +1448,7 @@ export type RoutePath =
   | `/huggingface/models/:group`
   | `/huijin-inv/news`
   | `/huitun/xiaohongshu/:user_id`
+  | `/humanlayer/blog`
   | `/hunanpea/rsks/:guid`
   | `/hunau/gfxy/:category?/:page?`
   | `/hunau/ied/:type?/:category?/:page?`
@@ -1562,6 +1566,7 @@ export type RoutePath =
   | `/ithome/tag/:name`
   | `/ithome/tw/feeds/:category`
   | `/ithome/zt/:id?`
+  | `/itsec/news`
   | `/iwara/ranking/:type?/:sort?/:rating?`
   | `/iwara/subscriptions`
   | `/iwara/users/:username/:type?`
@@ -1696,6 +1701,7 @@ export type RoutePath =
   | `/kiro/blog`
   | `/kiro/changelog`
   | `/kisskiss/blog/:category?`
+  | `/kleinanzeigen/search/:routeParams`
   | `/komiic/comic/:id`
   | `/konachan/post/popular_recent/:period?`
   | `/konachan/sfw/post/popular_recent/:period?`
@@ -2127,6 +2133,7 @@ export type RoutePath =
   | `/nytimes/rss/:cat?`
   | `/obsidian/plugins`
   | `/obsidian/publish/:id`
+  | `/obsidian/themes`
   | `/oceanengine/index/:keyword/:channel?`
   | `/oct0pu5/`
   | `/odaily/:id?`
@@ -2523,6 +2530,9 @@ export type RoutePath =
   | `/seu/yjs`
   | `/seu/yzb/:type`
   | `/sfacg/novel/chapter/:id`
+  | `/shanghaimuseum/display/offline-exhibit/:type?`
+  | `/shanghaimuseum/information/news/:type?`
+  | `/shanximuseum/exhibition/temporary/:type?`
   | `/shcstheatre/programs`
   | `/shiep/:type/:id?`
   | `/shisu/en/:section`
@@ -2567,6 +2577,7 @@ export type RoutePath =
   | `/sinchew*`
   | `/sis001/author/:id?`
   | `/sis001/forum/:id?`
+  | `/sjtu/cs/xshd`
   | `/sjtu/gs/:type/:num?`
   | `/sjtu/jwc/:type?`
   | `/sjtu/seiee/:path/:catID?/:searchCatCode?`
