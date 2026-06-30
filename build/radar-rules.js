@@ -8517,7 +8517,7 @@
       { title:"Notifications",
         docs:"https://docs.rsshub.app/routes/programming",
         source:[ "/notifications" ],
-        target:"/github/notifications" },
+        target:"/github/notifications/:state?" },
       { title:"Organization Event",
         docs:"https://docs.rsshub.app/routes/programming",
         source:[ "/orgs/:org" ],

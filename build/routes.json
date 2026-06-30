@@ -48969,17 +48969,38 @@
         "location": "gist.ts",
         "module": "() => import('@/routes/github/gist.ts')"
       },
-      "/notifications": {
-        "path": "/notifications",
+      "/notifications/:state?": {
+        "path": "/notifications/:state?",
         "categories": [
           "programming"
         ],
         "example": "/github/notifications",
+        "view": 5,
+        "parameters": {
+          "state": {
+            "description": "Notification state to include",
+            "default": "unread",
+            "options": [
+              {
+                "label": "Unread notifications",
+                "value": "unread"
+              },
+              {
+                "label": "All notifications",
+                "value": "all"
+              },
+              {
+                "label": "Participating notifications",
+                "value": "participating"
+              }
+            ]
+          }
+        },
         "features": {
           "requireConfig": [
             {
               "name": "GITHUB_ACCESS_TOKEN",
-              "description": ""
+              "description": "GitHub access token with notifications permission"
             }
           ]
         },
@@ -48995,6 +49016,7 @@
           "zhzy0077"
         ],
         "url": "github.com/notifications",
+        "description": "Convert the authenticated user GitHub Notifications inbox to RSS. Fetches the first page of the GitHub Notifications API and does not mark notifications as read.",
         "location": "notifications.ts",
         "module": "() => import('@/routes/github/notifications.ts')"
       },

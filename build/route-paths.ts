@@ -1136,7 +1136,7 @@ export type RoutePath =
   | `/github/file/:user/:repo/:branch/:filepath{.+}`
   | `/github/gist/:gistId`
   | `/github/issue/:user/:repo/:state?/:labels?`
-  | `/github/notifications`
+  | `/github/notifications/:state?`
   | `/github/org_event/:org/:types?`
   | `/github/pull/:user/:repo/:state?/:labels?`
   | `/github/pulse/:user/:repo/:period?`
