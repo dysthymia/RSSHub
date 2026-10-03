@@ -2,7 +2,7 @@ import { load } from 'cheerio';
 import { raw } from 'hono/html';
 import { renderToString } from 'hono/jsx/dom/server';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -25,35 +25,35 @@ const renderDescription = ({ images, description }) =>
     );
 export const handler = async (ctx) => {
     const { category = 'fgw_zxxxgk' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 20;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 20;
 
     const rootUrl = 'https://fgw.sh.gov.cn';
-    const currentUrl = new URL(`${category}/index.html`, rootUrl).href;
+    const currentUrl = `${rootUrl}/${category}/index.html`;
 
     const { data: response } = await got(currentUrl);
 
     const $ = load(response);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = $('ul.nowrapli li')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
             return {
-                title: item.find('a').prop('title'),
-                pubDate: parseDate(item.find('span.time').text()),
-                link: new URL(item.find('a').prop('href'), rootUrl).href,
+                title: $item.find('a').prop('title')!,
+                pubDate: parseDate($item.find('span.time').text()),
+                link: new URL($item.find('a').prop('href')!, rootUrl).href,
                 language,
             };
         });
 
     items = await Promise.all(
         items.map((item) =>
-            cache.tryGet(item.link, async () => {
-                if (!item.link.endsWith('.html')) {
+            cache.tryGet(item.link!, async () => {
+                if (!item.link!.endsWith('.html')) {
                     item.enclosure_url = item.link;
                     item.enclosure_type = item.link ? `application/${item.link.split(/\./).pop()}` : undefined;
                     item.enclosure_title = item.title;
@@ -81,7 +81,7 @@ export const handler = async (ctx) => {
 
                 item.title = title;
                 item.description = description;
-                item.pubDate = timezone(parseDate($$('meta[name="PubDate"]').prop('content')), +8);
+                item.pubDate = timezone(parseDate($$('meta[name="PubDate"]').prop('content')), 8);
                 item.category = [...new Set([$$('meta[name="ColumnName"]').prop('content'), $$('meta[name="ColumnKeywords"]').prop('content')])].filter(Boolean);
                 item.author = $$('meta[name="ContentSource"]').prop('content');
                 item.content = {
@@ -119,8 +119,8 @@ export const handler = async (ctx) => {
 };
 
 export const route: Route = {
-    path: ['/sh/fgw/:category{.+}?', '/shanghai/fgw/:category{.+}?'],
-    name: '上海市发展和改革委员会',
+    path: '/fgw/:category{.+}?',
+    name: '发展和改革委员会',
     url: 'fgw.sh.gov.cn',
     maintainers: ['nczitzk'],
     handler,
@@ -156,12 +156,12 @@ export const route: Route = {
         {
             title: '最新信息公开',
             source: ['fgw.sh.gov.cn/fgw_zxxxgk/index.html'],
-            target: '/sh/fgw/fgw_zxxxgk',
+            target: '/fgw/fgw_zxxxgk',
         },
         {
             title: '要闻动态',
             source: ['fgw.sh.gov.cn/fgw_fzggdt/index.html'],
-            target: '/sh/fgw/fgw_fzggdt',
+            target: '/fgw/fgw_fzggdt',
         },
     ],
 };

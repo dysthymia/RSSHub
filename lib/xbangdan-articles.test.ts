@@ -10,6 +10,15 @@ const dayMilliseconds = 24 * 60 * 60 * 1000;
 const statusId = (timestamp: number) => ((BigInt(timestamp) - 1_288_834_974_657n) << 22n).toString();
 const createContext = (region?: string) => ({ req: { param: () => region } }) as unknown as Context;
 
+// 路由处理器也可返回响应对象；测试只接受包含条目的订阅数据。
+const getFeed = async (ctx: Context) => {
+    const feed = await route.handler(ctx);
+    if (!feed || feed instanceof Response || !Array.isArray(feed.item)) {
+        throw new Error('Expected route feed items');
+    }
+    return { ...feed, item: feed.item };
+};
+
 // Controlled timestamps verify the exact boundary without depending on the live ranking.
 // 使用固定时间验证 24 小时边界，避免测试受实时榜单变化影响。
 const card = (region: string, timestamp: number) => `
@@ -41,7 +50,7 @@ describe('/xbangdan/articles/:region?', () => {
             ${card('gl', now - 2000)}
         </div>`);
 
-        const feed = await route.handler(createContext());
+        const feed = await getFeed(createContext());
         expect(feed.title).toBe('X榜单 - 中文区 24 小时长文');
         expect(feed.link).toBe('https://xbangdan.com/articles/');
         expect(feed.item).toHaveLength(2);
@@ -61,7 +70,7 @@ describe('/xbangdan/articles/:region?', () => {
     it('includes overseas cards hidden by the source page and retains translated content', async () => {
         mockPage(`<div id="art-list">${card('cn', now - 1000)}${card('gl', now - 2000)}</div>`);
 
-        const feed = await route.handler(createContext('gl'));
+        const feed = await getFeed(createContext('gl'));
         expect(feed.title).toBe('X榜单 - 海外区 24 小时长文');
         expect(feed.language).toBe('zh-CN');
         expect(feed.item).toHaveLength(1);
@@ -79,7 +88,7 @@ describe('/xbangdan/articles/:region?', () => {
 
     it('leaves a genuinely empty time window for the standard RSSHub empty-feed check', async () => {
         mockPage(`<div id="art-list">${card('cn', now - dayMilliseconds - 1)}</div>`);
-        const feed = await route.handler(createContext('cn'));
+        const feed = await getFeed(createContext('cn'));
         expect(feed.item).toEqual([]);
         expect(feed).not.toHaveProperty('allowEmpty');
     });

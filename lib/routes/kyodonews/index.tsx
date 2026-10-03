@@ -1,6 +1,7 @@
 import { load } from 'cheerio';
 import { raw } from 'hono/html';
 import { renderToString } from 'hono/jsx/dom/server';
+import { FetchError } from 'ofetch';
 
 import InvalidParameterError from '@/errors/types/invalid-parameter';
 import type { Route } from '@/types';
@@ -57,7 +58,7 @@ async function handler(ctx) {
     try {
         response = await got(currentUrl);
     } catch (error) {
-        throw error.response && error.response.statusCode === 404 ? new InvalidParameterError('Invalid keyword') : error;
+        throw error instanceof FetchError && error.statusCode === 404 ? new InvalidParameterError('Invalid keyword') : error;
     }
 
     const $ = load(response.data, { xmlMode: keyword === 'rss' });
@@ -86,8 +87,8 @@ async function handler(ctx) {
         items = $('.m-article-wrap:first-of-type .m-article-item__link')
             .toArray()
             .map((item) => {
-                item = $(item);
-                const link = item.attr('href');
+                const $item = $(item);
+                const link = $item.attr('href');
                 return {
                     link: resolveRelativeLink(link, rootUrl),
                 };

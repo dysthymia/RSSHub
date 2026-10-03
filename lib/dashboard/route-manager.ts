@@ -127,7 +127,9 @@ export async function getRouteDashboardState(namespaces: Record<string, Namespac
     const namespaceRows: DashboardNamespace[] = [];
     const routeRows: DashboardRoute[] = [];
 
-    for (const [namespace, data] of Object.entries(namespaces).toSorted(([a], [b]) => a.localeCompare(b))) {
+    // 先排序命名空间和路由，保证面板列表顺序稳定。
+    const sortedNamespaces = Object.entries(namespaces).toSorted(([a], [b]) => a.localeCompare(b));
+    for (const [namespace, data] of sortedNamespaces) {
         const routeEntries = Object.entries(data.routes || {}) as Array<[string, RouteWithLocation]>;
         const namespaceFilePath = path.posix.join(routeDirectory, namespace, 'namespace.ts');
 
@@ -140,7 +142,8 @@ export async function getRouteDashboardState(namespaces: Record<string, Namespac
             gitStatus: gitStatuses.get(namespaceFilePath),
         });
 
-        for (const [routePath, route] of routeEntries.toSorted(([a], [b]) => a.localeCompare(b))) {
+        const sortedRoutes = routeEntries.toSorted(([a], [b]) => a.localeCompare(b));
+        for (const [routePath, route] of sortedRoutes) {
             const location = route.location;
             const filePath = location ? path.posix.join(routeDirectory, namespace, toPosixPath(location)) : undefined;
             const fullRoutePath = `/${namespace}${routePath}`;
@@ -229,7 +232,7 @@ export function resolveRouteFilePath(ref: RouteFileRef, rootDirectory = process.
     if (path.isAbsolute(ref.location) || ref.location.split(/[\\/]/).includes('..')) {
         throw new Error('Invalid route file location.');
     }
-    if (!/\.(tsx?|mts)$/.test(ref.location)) {
+    if (!/\.(?:tsx?|mts)$/.test(ref.location)) {
         throw new Error('Route file must be a TypeScript file.');
     }
 

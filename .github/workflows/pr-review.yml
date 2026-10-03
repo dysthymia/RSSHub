@@ -22,7 +22,7 @@ jobs:
             pull-requests: write
         steps:
             - name: Checkout repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
             # https://github.com/orgs/community/discussions/25220#discussioncomment-11316244
             - name: Search the PR that triggered this workflow
@@ -104,11 +104,12 @@ jobs:
                           "grep*": "allow",
                           "head*": "allow",
                           "ls*": "allow",
+                          "rg*": "allow",
                           "sed*": "allow",
                           "tail*": "allow",
                           "wc*": "allow"
                         },
-                        "webfetch": "deny"
+                        "webfetch": "${{ github.event_name == 'workflow_dispatch' && 'allow' || 'deny' }}"
                       }
               run: |
                   if [ -z "$PR_NUMBER" ]; then
@@ -130,7 +131,6 @@ jobs:
                   1. Use GitHub CLI commands to inspect this PR's metadata and code changes.
                   2. Review only based on the following rules.
                   3. Report only clear and actionable violations from changed files.
-                  4. If no clear violations are found, do not comment.
 
                   Review rules:
                   $RULES
@@ -146,7 +146,7 @@ jobs:
                   - Check existing comments in issue comments for this marker.
                   - If a marker comment exists, update it with latest findings.
                   - Otherwise create a new PR comment.
-                  - If there are no findings and marker comment exists, edit marker comment to a short pass status.
+                  - If there are no findings: when a marker comment exists, edit it to the short pass status below; when none exists, do not comment.
 
                   gh command reference (PR_NUMBER and GITHUB_REPOSITORY are available as env vars):
                   - Create a new PR comment:

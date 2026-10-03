@@ -46,11 +46,11 @@ async function handler(ctx) {
     const lang = ctx.req.param('lang');
     const category = ctx.req.param('category') || '';
     const host = hostMap[lang];
-    let subTitle = ` - ${lang.toUpperCase()}`;
+    let subtitle = ` - ${lang.toUpperCase()}`;
     let url = host;
     if (category.length > 0) {
         url = `${host}/news/${category}`;
-        subTitle = `${subTitle} - ${category}`;
+        subtitle += ` - ${category}`;
     }
     const response = await got({
         method: 'get',
@@ -59,8 +59,8 @@ async function handler(ctx) {
 
     const $ = load(response.data);
     const contents = $('script:contains("window.__STATE__")').text();
-    const data = JSON.parse(contents.match(/{.*}/)[0]).data;
-    const filteredKeys = Object.entries(data)
+    const data = JSON.parse(contents.match(/\{.*\}/)![0]).data;
+    const filteredKeys = Object.entries<any>(data)
         .filter(([key, value]) => {
             if (!key.startsWith('article')) {
                 return false;
@@ -76,9 +76,9 @@ async function handler(ctx) {
     const items = await pMap(list, (item) => parseArticle(item), { concurrency: 10 });
 
     return {
-        title: `WSJ${subTitle}`,
+        title: `WSJ${subtitle}`,
         link: url,
-        description: `WSJ${subTitle}`,
+        description: `WSJ${subtitle}`,
         item: items,
     };
 }

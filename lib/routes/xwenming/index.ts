@@ -2,14 +2,14 @@ import type { CheerioAPI } from 'cheerio';
 import { load } from 'cheerio';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { category } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '50', 10);
+    const limit = Number(ctx.req.query('limit') ?? '50');
 
     const apiSlug = 'wp-json/wp/v2';
     const baseUrl = 'https://www.xwenming.com';
@@ -39,7 +39,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
     const targetResponse = await ofetch(targetUrl);
     const $: CheerioAPI = load(targetResponse);
-    const language = $('html').attr('lang') ?? 'zh';
+    const language = ($('html').attr('lang') ?? 'zh') as Language;
 
     const items: DataItem[] = response.slice(0, limit).map((item): DataItem => {
         const title: string = item.title?.rendered ?? item.title;

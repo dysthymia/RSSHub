@@ -98,7 +98,7 @@ async function handler(ctx) {
                 $('.entry')
                     .find('div')
                     .each((_, el) => {
-                        const temp = $(el).html();
+                        const temp = $.html($(el).contents());
                         $(el).replaceWith(temp);
                     });
                 $('.entry').find('a').remove();
@@ -115,7 +115,7 @@ async function handler(ctx) {
             const pubDate = parseDate(data.date);
             const author = data.author;
             const result = {
-                title,
+                title: title!,
                 description,
                 link: url,
                 pubDate,

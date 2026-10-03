@@ -14,6 +14,15 @@ const createCtx = (order?: string, limit?: string) =>
         },
     }) as unknown as Context;
 
+// 路由处理器也可返回响应对象；测试只接受包含条目的订阅数据。
+const getFeed = async (ctx: Context) => {
+    const feed = await route.handler(ctx);
+    if (!feed || feed instanceof Response || !Array.isArray(feed.item)) {
+        throw new Error('Expected route feed items');
+    }
+    return { ...feed, item: feed.item };
+};
+
 const portalHtml = `<!doctype html>
 <html>
   <head><title>Panwiki - （原我的小站论坛）</title></head>
@@ -85,7 +94,7 @@ describe('/panwiki/portal/:order?', () => {
             })
         );
 
-        const feed = await route.handler(createCtx('dateline'));
+        const feed = await getFeed(createCtx('dateline'));
         expect(feed.title).toBe('Panwiki - 新鲜出炉');
         expect(feed.link).toBe('https://www.panwiki.com/portal.php?order=dateline');
         expect(feed.item).toHaveLength(2);
@@ -117,7 +126,7 @@ describe('/panwiki/portal/:order?', () => {
             })
         );
 
-        const feed = await route.handler(createCtx(undefined, '1'));
+        const feed = await getFeed(createCtx(undefined, '1'));
         expect(feed.item).toHaveLength(1);
     });
 
@@ -135,7 +144,7 @@ describe('/panwiki/portal/:order?', () => {
             })
         );
 
-        const feed = await route.handler(createCtx('dateline', '1'));
+        const feed = await getFeed(createCtx('dateline', '1'));
         expect(feed.item).toHaveLength(1);
     });
 
@@ -153,7 +162,7 @@ describe('/panwiki/portal/:order?', () => {
             })
         );
 
-        const feed = await route.handler(createCtx('dateline', '1'));
+        const feed = await getFeed(createCtx('dateline', '1'));
         expect(feed.item).toHaveLength(1);
     });
 
@@ -173,7 +182,7 @@ describe('/panwiki/portal/:order?', () => {
             })
         );
 
-        const feed = await route.handler(createCtx('dateline', '1'));
+        const feed = await getFeed(createCtx('dateline', '1'));
         expect(feed.item).toHaveLength(1);
     });
 
@@ -233,7 +242,7 @@ describe('/panwiki/portal/:order?', () => {
             })
         );
 
-        const feed = await route.handler(createCtx('dateline', '1'));
+        const feed = await getFeed(createCtx('dateline', '1'));
 
         expect(portalRequests).toBe(2);
         expect(feed.item).toHaveLength(1);

@@ -201,7 +201,7 @@ export const route: Route = {
 
 async function handler(ctx) {
     const id = ctx.req.param('id');
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 100;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 100;
 
     const queryString = id ? `?cid=${id}` : '';
     const currentUrl = new URL(id ? `newsclass.aspx${queryString}` : '', rootUrl).href;
@@ -211,13 +211,13 @@ async function handler(ctx) {
     const feed = await parser.parseURL(rssUrl);
 
     let items = feed.items.slice(0, limit).map((item) => ({
-        title: item.title,
+        title: item.title!,
         link: item.link,
         description: item.content,
         author: item.creator,
         category: item.categories,
-        guid: item.guid.match(/\/(\d+)\.htm/)[1],
-        pubDate: parseDate(item.isoDate),
+        guid: item.guid!.match(/\/(\d+)\.htm/)![1],
+        pubDate: parseDate(item.isoDate!),
     }));
 
     if (id) {
@@ -228,6 +228,6 @@ async function handler(ctx) {
         ...(await getInfo(currentUrl)),
 
         item: items,
-        title: `${title} - ${feed.title.split(/_/).pop() || categories.zhibo}`,
+        title: `${title} - ${feed.title!.split(/_/).pop() || categories.zhibo}`,
     };
 }

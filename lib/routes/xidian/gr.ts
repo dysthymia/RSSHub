@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -227,15 +227,11 @@ export const route: Route = {
 async function handler(ctx) {
     const { category = 'home_tzgg1' } = ctx.req.param();
     const url = `${baseUrl}/${struct[category].path}.htm`;
-    const response = await got(url, {
-        headers: {
-            referer: baseUrl,
-        },
-    });
+    const response = await got(url);
 
     const $ = load(response.data);
 
-    if (category === 'yyjs_jbqk' || category === 'yyjs_jbqk1' || category === 'yyjs_jbqk2' || category === 'yyjs_jbqk4') {
+    if (['yyjs_jbqk', 'yyjs_jbqk1', 'yyjs_jbqk2', 'yyjs_jbqk4'].includes(category)) {
         return {
             title: $('.right-bt-left').text(),
             link: url,
@@ -247,38 +243,37 @@ async function handler(ctx) {
                 },
             ],
         };
-    } else {
-        let items = $(struct[category].selector.list)
-            .toArray()
-            .map((item) => {
-                item = $(item);
-                return {
-                    title: item.find('a').text(),
-                    link: new URL(item.find('a').attr('href'), baseUrl).href,
-                    pubDate: parseDate(item.find('span').text()),
-                };
-            });
-
-        items = await Promise.all(
-            items.map((item) =>
-                cache.tryGet(item.link, async () => {
-                    const detailResponse = await got(item.link, {
-                        headers: {
-                            referer: url,
-                        },
-                    });
-                    const content = load(detailResponse.data);
-                    content('.content-sxt').remove();
-                    item.description = content('[name="_newscontent_fromname"]').html();
-                    return item;
-                })
-            )
-        );
-
-        return {
-            title: $('title').text(),
-            link: url,
-            item: items,
-        };
     }
+    let items = $(struct[category].selector.list)
+        .toArray()
+        .map((item): DataItem => {
+            const $item = $(item);
+            return {
+                title: $item.find('a').text(),
+                link: new URL($item.find('a').attr('href')!, baseUrl).href,
+                pubDate: parseDate($item.find('span').text()),
+            };
+        });
+
+    items = await Promise.all(
+        items.map((item) =>
+            cache.tryGet(item.link!, async () => {
+                const detailResponse = await got(item.link, {
+                    headers: {
+                        referer: url,
+                    },
+                });
+                const content = load(detailResponse.data);
+                content('.content-sxt').remove();
+                item.description = content('[name="_newscontent_fromname"]').html();
+                return item;
+            })
+        )
+    );
+
+    return {
+        title: $('title').text(),
+        link: url,
+        item: items,
+    };
 }

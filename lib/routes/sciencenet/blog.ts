@@ -1,7 +1,8 @@
 import { load } from 'cheerio';
 import iconv from 'iconv-lite';
+import pMap from 'p-map';
 
-import type { Route } from '@/types';
+import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -61,19 +62,21 @@ async function handler(ctx) {
     let items = $('tr td a[title]')
         .slice(0, ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit')) : 50)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
             return {
-                title: item.text(),
-                link: `${rootUrl}/${item.attr('href')}`,
-                pubDate: new Date(item.next().text()).toUTCString(),
+                title: $item.text(),
+                link: `${rootUrl}/${$item.attr('href')}`,
+                pubDate: new Date($item.next().text()).toUTCString(),
             };
         });
 
-    items = await Promise.all(
-        items.map((item) =>
-            cache.tryGet(item.link, async () => {
+    // Bound simultaneous downloads and decoding of potentially large GBK pages.
+    items = await pMap(
+        items,
+        (item) =>
+            cache.tryGet(item.link!, async () => {
                 const detailResponse = await got({
                     method: 'get',
                     url: item.link,
@@ -84,11 +87,11 @@ async function handler(ctx) {
 
                 item.author = content('.xs2').text();
                 item.description = content('#blog_article').html();
-                item.pubDate = timezone(parseDate(content('.xg1').eq(5).text()), +8);
+                item.pubDate = timezone(parseDate(content('.xg1').eq(5).text()), 8);
 
                 return item;
-            })
-        )
+            }),
+        { concurrency: 3 }
     );
 
     return {

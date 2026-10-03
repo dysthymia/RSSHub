@@ -102,7 +102,8 @@ function assertLocalRequest(ctx) {
 
 function isLocalRequest(ctx): boolean {
     const hostname = new URL(ctx.req.url).hostname;
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1';
+    // 仅允许本机地址访问写入接口。
+    return ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname);
 }
 
 export default app;

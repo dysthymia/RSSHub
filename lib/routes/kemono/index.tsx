@@ -6,7 +6,7 @@ import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
-import { KEMONO_API_URL, KEMONO_ROOT_URL, MIME_TYPE_MAP } from './const';
+import { KEMONO_API_URL, KEMONO_ASSETS_URL, KEMONO_ROOT_URL, MIME_TYPE_MAP } from './const';
 import type { DiscordMessage, KemonoFile, KemonoPost } from './types';
 
 const headers = { Accept: 'text/css' };
@@ -72,20 +72,9 @@ Support for announcements and fancards:
 :::`,
 };
 
-function parseJsonField(field: any): any {
-    if (typeof field !== 'string') {
-        return field;
-    }
-
-    try {
-        let parsedData = JSON.parse(field);
-        if (typeof parsedData === 'string') {
-            parsedData = JSON.parse(parsedData);
-        }
-        return parsedData;
-    } catch {
-        return field;
-    }
+interface KemonoAttachment {
+    name?: string;
+    path?: string;
 }
 
 function buildApiUrl(source: string, userId?: string, contentType?: string): string {
@@ -135,27 +124,23 @@ async function fetchUserProfile(source: string, userId: string): Promise<string>
 function processPostFiles(post: KemonoPost): KemonoFile[] {
     const files: KemonoFile[] = [];
 
-    if (post.file) {
-        const parsedFile = parseJsonField(post.file);
-        if (parsedFile && typeof parsedFile === 'object' && 'path' in parsedFile) {
-            files.push({
-                name: parsedFile.name || 'Unnamed File',
-                path: parsedFile.path,
-                extension: extractFileExtension(parsedFile.path),
-            });
-        }
+    const file: KemonoAttachment | undefined = post.file;
+    if (file?.path) {
+        files.push({
+            name: file.name || 'Unnamed File',
+            path: file.path,
+            extension: extractFileExtension(file.path),
+        });
     }
 
-    if (Array.isArray(post.attachments)) {
-        for (const attachment of post.attachments) {
-            const parsedAttachment = parseJsonField(attachment);
-            if (parsedAttachment && typeof parsedAttachment === 'object' && 'path' in parsedAttachment) {
-                files.push({
-                    name: parsedAttachment.name || 'Unnamed Attachment',
-                    path: parsedAttachment.path,
-                    extension: extractFileExtension(parsedAttachment.path),
-                });
-            }
+    const attachments: KemonoAttachment[] = post.attachments ?? [];
+    for (const attachment of attachments) {
+        if (attachment.path) {
+            files.push({
+                name: attachment.name || 'Unnamed Attachment',
+                path: attachment.path,
+                extension: extractFileExtension(attachment.path),
+            });
         }
     }
 
@@ -177,15 +162,17 @@ function generateEnclosureInfo(htmlContent: string): { enclosure_url?: string; e
         }
 
         const extension = extractFileExtension(src);
-        const mimeType = MIME_TYPE_MAP[extension as keyof typeof MIME_TYPE_MAP];
+        const mimeType = Object.entries(MIME_TYPE_MAP).find(([ext]) => ext === extension)?.[1];
 
-        if (mimeType) {
-            enclosureInfo = {
-                enclosure_url: new URL(src, KEMONO_ROOT_URL).toString(),
-                enclosure_type: mimeType,
-            };
-            return false;
+        if (!mimeType) {
+            return;
         }
+
+        enclosureInfo = {
+            enclosure_url: new URL(src, KEMONO_ROOT_URL).href,
+            enclosure_type: mimeType,
+        };
+        return false;
     });
 
     return enclosureInfo;
@@ -196,7 +183,7 @@ const renderDiscordMessage = (message: DiscordMessage) =>
         <>
             {message.content ? <p>{message.content}</p> : null}
             {message.attachments?.map((attachment) => (
-                <img src={`https://img.kemono.cr/thumbnail/data${attachment.path}`} />
+                <img src={`${KEMONO_ASSETS_URL}/thumbnail/data${attachment.path}`} />
             ))}
             {message.embeds?.map((embed) => {
                 if (embed.type === 'image') {
@@ -225,26 +212,27 @@ const renderPostFiles = (post: KemonoPost & { files?: KemonoFile[] }) =>
         <>
             {post.files?.map((file) => {
                 const extension = file.extension;
-                const typeSuffix = file.extention ?? '';
+                const typeSuffix = file.extension ?? '';
+                const mediaUrl = `${KEMONO_ASSETS_URL}${file.path}`;
 
                 if (['jpg', 'png', 'webp', 'jpeg', 'jfif'].includes(extension)) {
-                    return <img src={file.path} />;
+                    return <img src={mediaUrl} />;
                 }
                 if (['m4a', 'mp3', 'ogg'].includes(extension)) {
                     return (
                         <audio controls>
-                            <source src={file.path} type={`audio/${typeSuffix}`} />
+                            <source src={mediaUrl} type={`audio/${typeSuffix}`} />
                         </audio>
                     );
                 }
                 if (['mp4', 'webm'].includes(extension)) {
                     return (
                         <video controls>
-                            <source src={file.path} type={`video/${typeSuffix}`} />
+                            <source src={mediaUrl} type={`video/${typeSuffix}`} />
                         </video>
                     );
                 }
-                return <a href={file.path}>{file.name}</a>;
+                return <a href={mediaUrl}>{file.name}</a>;
             })}
             {post.embed ? (
                 post.embed.type === 'image' ? (
@@ -347,14 +335,17 @@ function processPosts(posts: KemonoPost[], authorName: string, limit: number) {
             const fanboxRegex = /downloads\.fanbox\.cc/;
             $('a').each((_, el) => {
                 const link = $(el).attr('href');
-                if (link && fanboxRegex.test(link)) {
-                    $(el).replaceWith(kemonoFileElements[replacementCount] || '');
-                    replacementCount++;
+                if (!(link && fanboxRegex.test(link))) {
+                    return;
                 }
+
+                $(el).replaceWith(kemonoFileElements[replacementCount] || '');
+                replacementCount++;
             });
 
             description = (kemonoFileElements[0] || '') + $.html();
-            for (const fileElement of kemonoFileElements.slice(replacementCount + 1)) {
+            const remainingFileElements = kemonoFileElements.slice(replacementCount + 1);
+            for (const fileElement of remainingFileElements) {
                 description += fileElement;
             }
 
@@ -387,7 +378,7 @@ async function handler(ctx) {
 
         const authorName = isPostsMode || isDiscordMode || !userId ? '' : await fetchUserProfile(source, userId);
 
-        const iconUrl = isPostsMode || isDiscordMode ? `${KEMONO_ROOT_URL}/favicon.ico` : `https://img.kemono.cr/icons/${source}/${userId}`;
+        const iconUrl = isPostsMode || isDiscordMode ? `${KEMONO_ROOT_URL}/favicon.ico` : `${KEMONO_ASSETS_URL}/icons/${source}/${userId}`;
 
         let items: any[];
         let title: string;

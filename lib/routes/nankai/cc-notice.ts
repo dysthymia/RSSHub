@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -45,7 +45,7 @@ export const route: Route = {
         const list = $('#wp_news_w49 table tr')
             .slice(1) // 跳过表头
             .toArray()
-            .map((tr) => {
+            .map((tr): DataItem | null => {
                 const $tr = $(tr);
                 const cells = $tr.find('td');
 
@@ -73,33 +73,31 @@ export const route: Route = {
                 return {
                     title,
                     link,
-                    pubDate: timezone(parseDate(dateStr), +8),
+                    pubDate: timezone(parseDate(dateStr), 8),
                     author: publisher,
                 };
             })
-            .filter((item) => item && item.link); // 过滤掉空项目和没有链接的项目
+            .filter((item): item is DataItem => Boolean(item?.link)); // 过滤掉空项目和没有链接的项目
 
         // 获取每篇文章的详细内容
         const items = await Promise.all(
             list.map((item) =>
-                item
-                    ? cache.tryGet(item.link, async () => {
-                          try {
-                              const { data: response } = await got(item.link);
-                              const $ = load(response);
+                cache.tryGet(item.link!, async () => {
+                    try {
+                        const { data: response } = await got(item.link);
+                        const $ = load(response);
 
-                              // 优化内容选择器逻辑，避免重复选择
-                              let description = $('.wp_articlecontent').html() || $('.body-news-detail').html();
+                        // 优化内容选择器逻辑，避免重复选择
+                        let description = $('.wp_articlecontent').html() || $('.body-news-detail').html();
 
-                              description = description || item.title;
-                              item.description = description;
-                          } catch {
-                              // 如果获取详细内容失败，返回基本信息
-                              item.description = item.title + ' (获取详细内容失败)';
-                          }
-                          return item;
-                      })
-                    : null
+                        description ||= item.title;
+                        item.description = description;
+                    } catch {
+                        // 如果获取详细内容失败，返回基本信息
+                        item.description = item.title + ' (获取详细内容失败)';
+                    }
+                    return item;
+                })
             )
         );
 

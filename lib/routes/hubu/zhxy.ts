@@ -1,33 +1,33 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
 export const handler = async (ctx) => {
     const { category = 'index/tzgg' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 20;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 20;
 
     const rootUrl = 'https://zhxy.hubu.edu.cn';
-    const currentUrl = new URL(`${category}.htm`, rootUrl).href;
+    const currentUrl = `${rootUrl}/${category}.htm`;
 
     const { data: response } = await got(currentUrl);
 
     const $ = load(response);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = $('div.box h1 a')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem & { link: string } => {
+            const $item = $(item);
 
             return {
-                title: item.contents().first().text(),
-                pubDate: parseDate(item.find('span').text().replaceAll('[]', '')),
-                link: new URL(item.prop('href'), currentUrl).href,
+                title: $item.contents().first().text(),
+                pubDate: parseDate($item.find('span').text().replaceAll('[]', '')),
+                link: new URL($item.prop('href')!, currentUrl).href,
                 language,
             };
         });
@@ -68,7 +68,7 @@ export const handler = async (ctx) => {
     );
 
     const title = $('title').text();
-    const image = new URL($('div.logo a img').prop('src'), currentUrl).href;
+    const image = new URL($('div.logo a img').prop('src')!, currentUrl).href;
 
     return {
         title,

@@ -1,11 +1,12 @@
 import { load } from 'cheerio';
+import pMap from 'p-map';
 
 import { config } from '@/config';
 import ConfigNotFoundError from '@/errors/types/config-not-found';
+import type { DataItem } from '@/types';
 import cache from '@/utils/cache';
-import logger from '@/utils/logger';
+import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
-import { getPlaywrightPage } from '@/utils/playwright';
 
 const allowDomain = new Set(['javdb.com', 'javdb571.com', 'javdb36.com', 'javdb007.com', 'javdb521.com']);
 
@@ -18,24 +19,8 @@ const ProcessItems = async (ctx, currentUrl, title) => {
 
     const rootUrl = `https://${domain}`;
 
-    const { page, destroy, browser } = await getPlaywrightPage('about:blank');
-    if (config.javdb.session) {
-        await browser.setCookie({
-            name: '_jdb_session',
-            value: config.javdb.session,
-            domain,
-            path: '/',
-        });
-    }
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-        request.resourceType() === 'document' ? request.continue() : request.abort();
-    });
-    await page.goto(url.href, {
-        waitUntil: 'domcontentloaded',
-    });
-    const response = await page.content();
-    await page.close();
+    const headers = config.javdb.session ? { cookie: `_jdb_session=${config.javdb.session}` } : undefined;
+    const response = await ofetch(url.href, { headers });
 
     const $ = load(response);
 
@@ -44,7 +29,7 @@ const ProcessItems = async (ctx, currentUrl, title) => {
     let items = $('div.item')
         .slice(0, ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit')) : 20)
         .toArray()
-        .map((item) => {
+        .map((item): DataItem => {
             const element = $(item);
             return {
                 title: element.find('.video-title').text(),
@@ -53,19 +38,11 @@ const ProcessItems = async (ctx, currentUrl, title) => {
             };
         });
 
-    items = await Promise.all(
-        items.map((item) =>
-            cache.tryGet(item.link, async () => {
-                const page = await browser.newPage();
-                await page.setRequestInterception(true);
-                page.on('request', (request) => {
-                    request.resourceType() === 'document' ? request.continue() : request.abort();
-                });
-                logger.http(`Requesting ${item.link}`);
-                await page.goto(item.link, {
-                    waitUntil: 'domcontentloaded',
-                });
-                const detailResponse = await page.content();
+    items = await pMap(
+        items,
+        (item) =>
+            cache.tryGet(item.link!, async () => {
+                const detailResponse = await ofetch(item.link!, { headers });
 
                 const content = load(detailResponse);
 
@@ -85,19 +62,15 @@ const ProcessItems = async (ctx, currentUrl, title) => {
                     .toArray()
                     .map((v) => content(v).text());
                 item.author = content('.panel-block .value').last().parent().find('.value a').first().text();
-                item.description = content('.cover-container, .column-video-cover').html() + content('.movie-panel-info').html() + content('#magnets-content').html() + content('.preview-images').html();
-
-                await page.close();
+                item.description = content('.cover-container, .column-video-cover').html()! + content('.movie-panel-info').html()! + content('#magnets-content').html() + content('.preview-images').html();
 
                 return item;
-            })
-        )
+            }),
+        { concurrency: 2 }
     );
 
     const htmlTitle = $('title').text();
-    const subject = htmlTitle.includes('|') ? htmlTitle.split('|')[0] : '';
-
-    await destroy();
+    const subject = htmlTitle.includes('|') ? htmlTitle.split('|', 1)[0] : '';
 
     return {
         title: subject === '' ? title : `${subject} - ${title}`,

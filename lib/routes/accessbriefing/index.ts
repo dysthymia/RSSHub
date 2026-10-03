@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -9,10 +9,10 @@ import { renderDescription } from './templates/description';
 
 export const handler = async (ctx) => {
     const { category = 'latest/news' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 30;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 30;
 
     const rootUrl = 'https://www.accessbriefing.com';
-    const currentUrl = new URL(category, rootUrl).href;
+    const currentUrl = `${rootUrl}/${category}`;
     const apiUrl = new URL('Ajax/GetPagedArticles', rootUrl).href;
 
     const { data: currentResponse } = await got(currentUrl);
@@ -32,7 +32,7 @@ export const handler = async (ctx) => {
 
     const $ = load(currentResponse);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = response.slice(0, limit).map((item) => {
         const title = item.Article_Headline;
@@ -79,7 +79,7 @@ export const handler = async (ctx) => {
                 const description =
                     item.description +
                     renderDescription({
-                        description: $$('div.khl-article-page-storybody').html(),
+                        description: $$('div.khl-article-page-storybody').html() ?? undefined,
                     });
 
                 item.title = title;
@@ -99,7 +99,7 @@ export const handler = async (ctx) => {
         )
     );
 
-    const image = new URL($('a.navbar-brand img').prop('src'), rootUrl).href;
+    const image = new URL($('a.navbar-brand img').prop('src')!, rootUrl).href;
 
     return {
         title: $('title').text(),

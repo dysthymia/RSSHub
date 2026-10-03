@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
@@ -12,19 +12,19 @@ import timezone from '@/utils/timezone';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { category = 'association-news' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '10', 10);
+    const limit = Number(ctx.req.query('limit') ?? '10');
 
     const baseUrl = 'http://www.ccagm.org.cn';
-    const targetUrl: string = new URL(category, baseUrl).href;
+    const targetUrl = `${baseUrl}/${category}`;
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
-    const language = $('html').attr('lang') ?? 'zh';
+    const language = ($('html').attr('lang') ?? 'zh') as Language;
 
     let items: DataItem[] = $('ul.news_list li a')
         .slice(0, limit)
         .toArray()
-        .map((el): Element => {
+        .map((el) => {
             const $el: Cheerio<Element> = $(el);
 
             const title: string = $el.attr('title') ?? $el.find('span.fl').text();
@@ -34,9 +34,9 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
             const processedItem: DataItem = {
                 title,
-                pubDate: pubDateStr ? timezone(parseDate(pubDateStr), +8) : undefined,
+                pubDate: pubDateStr ? timezone(parseDate(pubDateStr), 8) : undefined,
                 link: linkUrl,
-                updated: upDatedStr ? timezone(parseDate(upDatedStr), +8) : undefined,
+                updated: upDatedStr ? timezone(parseDate(upDatedStr), 8) : undefined,
                 language,
             };
 
@@ -50,23 +50,23 @@ export const handler = async (ctx: Context): Promise<Data> => {
             }
 
             return cache.tryGet(item.link, async (): Promise<DataItem> => {
-                const detailResponse = await ofetch(item.link);
+                const detailResponse = await ofetch(item.link!);
                 const $$: CheerioAPI = load(detailResponse);
 
                 const title: string = $$('h2.center').text();
-                const description: string | undefined = $$('div.newsview').html() ?? undefined;
+                const description = $$('div.newsview').html();
                 const pubDateStr: string | undefined = $$('p.title_s').text().trim().split(/：/).pop();
                 const upDatedStr: string | undefined = pubDateStr;
 
                 const processedItem: DataItem = {
                     title,
                     description,
-                    pubDate: pubDateStr ? timezone(parseDate(pubDateStr), +8) : item.pubDate,
+                    pubDate: pubDateStr ? timezone(parseDate(pubDateStr), 8) : item.pubDate,
                     content: {
                         html: description,
                         text: description,
                     },
-                    updated: upDatedStr ? timezone(parseDate(upDatedStr), +8) : item.updated,
+                    updated: upDatedStr ? timezone(parseDate(upDatedStr), 8) : item.updated,
                     language,
                 };
 

@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -10,7 +10,7 @@ import { renderDescription } from './templates/description';
 
 export const handler = async (ctx) => {
     const { category = 'news/All' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 15;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 15;
 
     const rootUrl = 'http://www.a9vg.com';
     const currentUrl = new URL(`list/${category}`, rootUrl).href;
@@ -19,20 +19,20 @@ export const handler = async (ctx) => {
 
     const $ = load(response);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = $('a.a9-rich-card-list_item')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
-            const image = item.find('img.a9-rich-card-list_image');
-            const title = item.find('div.a9-rich-card-list_label').text();
+            const image = $item.find('img.a9-rich-card-list_image');
+            const title = $item.find('div.a9-rich-card-list_label').text();
 
             return {
                 title,
-                link: new URL(item.prop('href'), rootUrl).href,
+                link: new URL($item.prop('href')!, rootUrl).href,
                 description: renderDescription({
                     images: image
                         ? [
@@ -43,28 +43,28 @@ export const handler = async (ctx) => {
                           ]
                         : undefined,
                 }),
-                pubDate: timezone(parseDate(item.find('div.a9-rich-card-list_infos').text()), +8),
+                pubDate: timezone(parseDate($item.find('div.a9-rich-card-list_infos').text()), 8),
                 language,
             };
         });
 
     items = await Promise.all(
         items.map((item) =>
-            cache.tryGet(item.link, async () => {
+            cache.tryGet(item.link!, async () => {
                 const { data: detailResponse } = await got(item.link);
 
                 const $$ = load(detailResponse);
 
                 $$('ignore_js_op img, p img').each((_, el) => {
-                    el = $$(el);
+                    const $el = $$(el);
 
-                    el.parent().replaceWith(
+                    $el.parent().replaceWith(
                         renderDescription({
-                            images: el.prop('file')
+                            images: $el.prop('file')
                                 ? [
                                       {
-                                          src: el.prop('file'),
-                                          alt: el.next().find('div.xs0 p').first().text(),
+                                          src: $el.prop('file'),
+                                          alt: $el.next().find('div.xs0 p').first().text(),
                                       },
                                   ]
                                 : undefined,
@@ -72,9 +72,9 @@ export const handler = async (ctx) => {
                     );
                 });
 
-                item.title = $$('h1.ts, div.c-article-main_content-title').first().text();
+                item.title = $$('h1.ts, div.c-article-main_content-title').text();
                 item.description = renderDescription({
-                    description: $$('td.t_f, div.c-article-main_contentraw').first().html(),
+                    description: $$('td.t_f, div.c-article-main_contentraw').first().html() ?? undefined,
                 });
                 item.author =
                     $$('b a.blue').first().text() ||
@@ -91,11 +91,10 @@ export const handler = async (ctx) => {
                         $$('div.authi em')
                             .first()
                             .text()
-                            .trim()
                             .match(/发表于 (\d+-\d+-\d+ \d+:\d+)/)?.[1] ?? $$('span.c-article-main_content-intro-item').first().text(),
                         ['YYYY-M-D HH:mm', 'YYYY-MM-DD HH:mm']
                     ),
-                    +8
+                    8
                 );
                 item.language = language;
 

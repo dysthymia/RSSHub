@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -8,7 +8,7 @@ import timezone from '@/utils/timezone';
 
 export const handler = async (ctx) => {
     const { columnId = '1832739866673426433', subColumnId } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 30;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 30;
 
     const rootUrl = 'https://www.jgjcndrc.org.cn';
     const currentUrl = new URL(`list?clmId=${columnId}${subColumnId ? `&sclmId=${subColumnId}` : ''}`, rootUrl).href;
@@ -18,7 +18,7 @@ export const handler = async (ctx) => {
 
     const $ = load(currentResponse);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     const { data: response } = await got(apiColumnUrl, {
         searchParams: {
@@ -53,7 +53,7 @@ export const handler = async (ctx) => {
 
                 item.title = title;
                 item.description = description;
-                item.pubDate = timezone(parseDate(data.pubDate), +8);
+                item.pubDate = timezone(parseDate(data.pubDate), 8);
                 item.link = data.linkUrl || new URL(data.articleUrl, rootUrl).href;
                 item.category = data.parentColumns.map((c) => c.columnName);
                 item.guid = guid;
@@ -69,7 +69,7 @@ export const handler = async (ctx) => {
         )
     );
 
-    const image = new URL($('header img').last().prop('src'), rootUrl).href;
+    const image = new URL($('header img').last().prop('src')!, rootUrl).href;
 
     return {
         title: `${$('title').text()}${$('div.tit').text() ? ` - ${$('div.tit').text()}` : ''}`,
@@ -84,7 +84,7 @@ export const handler = async (ctx) => {
 };
 
 export const route: Route = {
-    path: '/jgjcndrc/:columnId?/:subColumnId?',
+    path: '/:columnId?/:subColumnId?',
     name: '中华人民共和国国家发展和改革委员会价格监测中心',
     url: 'www.jgjcndrc.org.cn',
     maintainers: ['nczitzk'],
@@ -114,9 +114,9 @@ export const route: Route = {
         {
             source: ['www.jgjcndrc.org.cn/list'],
             target: (_, url) => {
-                url = new URL(url);
-                const columnId = url.searchParams.get('clmId');
-                const subColumnId = url.searchParams.get('sclmId');
+                const { searchParams } = new URL(url);
+                const columnId = searchParams.get('clmId');
+                const subColumnId = searchParams.get('sclmId');
 
                 return `/jgjcndrc${columnId ? `/${columnId}${subColumnId ? `/${subColumnId}` : ''}` : ''}`;
             },

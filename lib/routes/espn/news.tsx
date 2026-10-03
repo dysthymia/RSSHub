@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio';
+import { load } from 'cheerio';
 import { renderToString } from 'hono/jsx/dom/server';
 
 import type { Route } from '@/types';
@@ -112,20 +112,26 @@ export const route: Route = {
                             },
                         });
 
-                        const $ = cheerio.load(article.content.story, null, false);
+                        const $ = load(article.content.story, null, false);
                         $('*').each((_, ele) => {
-                            if (junkPattern.test(ele.name)) {
+                            if (ele.nodeType !== 1) {
+                                return;
+                            }
+                            const { name } = ele;
+                            if (junkPattern.test(name)) {
                                 $(ele).remove();
                             }
-                            if (mediaPattern.test(ele.name)) {
-                                const mediaType = ele.name.match(mediaPattern)[1] === 'photo' ? 'images' : 'video';
-                                const mediaIndex = Number.parseInt(ele.name.match(mediaPattern)[2]) - 1;
-                                const media = article.content[mediaType][mediaIndex];
-                                if (media) {
-                                    $(ele).replaceWith(renderMedia(media));
-                                } else {
-                                    $(ele).remove();
-                                }
+                            if (!mediaPattern.test(name)) {
+                                return;
+                            }
+
+                            const mediaType = name.match(mediaPattern)![1] === 'photo' ? 'images' : 'video';
+                            const mediaIndex = Number.parseInt(name.match(mediaPattern)![2]) - 1;
+                            const media = article.content[mediaType][mediaIndex];
+                            if (media) {
+                                $(ele).replaceWith(renderMedia(media));
+                            } else {
+                                $(ele).remove();
                             }
                         });
 

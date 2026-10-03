@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Context } from 'hono';
 
 import InvalidParameterError from '@/errors/types/invalid-parameter';
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
@@ -43,7 +43,7 @@ const processMenu = (data: any[]) => {
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { name = '热点' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '30', 10);
+    const limit = Number(ctx.req.query('limit') ?? '30');
 
     const domain = 'm.21jingji.com';
     const baseUrl = `https://${domain}`;
@@ -65,7 +65,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
     const targetResponse = await ofetch(targetUrl);
     const $: CheerioAPI = load(targetResponse);
-    const language: string = $('html').attr('lang') ?? 'zh-CN';
+    const language = ($('html').attr('lang') ?? 'zh-CN') as Language;
 
     const authResponse = await ofetch(authUrl, {
         method: 'POST',
@@ -91,7 +91,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
             const title: string = item.title;
             const pubDate: string = item.inputtime;
             const linkUrl: string | undefined = item.url;
-            const categories: string[] = [...new Set(((item.keywords ?? '') as string)?.split(/,/).filter(Boolean))];
+            const categories: string[] = [...new Set<string>((item.keywords ?? '').split(/,/).filter(Boolean))];
             const authors: DataItem['author'] = [...new Set([item.mp?.name, item.author, item.editor, item.source].filter(Boolean))].map((name) => ({
                 name,
             }));
@@ -101,7 +101,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
             const processedItem: DataItem = {
                 title,
-                pubDate: pubDate ? timezone(parseRelativeDate(pubDate), +8) : undefined,
+                pubDate: pubDate ? timezone(parseRelativeDate(pubDate), 8) : undefined,
                 link: linkUrl,
                 category: categories,
                 author: authors,
@@ -124,7 +124,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                 }
 
                 return cache.tryGet(item.link, async (): Promise<DataItem> => {
-                    const detailResponse = await ofetch(item.link);
+                    const detailResponse = await ofetch(item.link!);
                     const $$: CheerioAPI = load(detailResponse);
 
                     $$('div.rela-box').remove();
@@ -135,19 +135,19 @@ export const handler = async (ctx: Context): Promise<Data> => {
                     const pubDateStr: string | undefined = $$('div.author-infos span')
                         .text()
                         .match(/(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2})/)?.[1];
-                    const categories: string[] = $$('meta[name="keywords"]').attr('content')?.split(/,/) ?? item.category ?? [];
+                    const categories: DataItem['category'] = $$('meta[name="keywords"]').attr('content')?.split(/,/) ?? item.category ?? [];
                     const upDatedStr: string | undefined = pubDateStr;
 
                     const processedItem: DataItem = {
                         title,
                         description,
-                        pubDate: pubDateStr ? timezone(parseDate(pubDateStr), +8) : item.pubDate,
+                        pubDate: pubDateStr ? timezone(parseDate(pubDateStr), 8) : item.pubDate,
                         category: categories,
                         content: {
                             html: description,
                             text: description,
                         },
-                        updated: upDatedStr ? timezone(parseDate(upDatedStr), +8) : item.updated,
+                        updated: upDatedStr ? timezone(parseDate(upDatedStr), 8) : item.updated,
                         language,
                     };
 

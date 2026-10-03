@@ -14,7 +14,7 @@ import { renderDescription } from './templates/description';
  *
  * @returns {Array} - An array of objects containing the key-value pairs.
  */
-const parseTree = (tree, result = []) => {
+const parseTree = (tree, result: Array<{ key: any; value: any }> = []) => {
     for (const obj of tree) {
         const { key, value, children } = obj;
         result.push({ key, value });
@@ -158,17 +158,16 @@ export const route: Route = {
 
 async function handler(ctx) {
     const { industry, label } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 50;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 50;
 
     const rootUrl = 'https://www.questmobile.com.cn';
     const apiUrl = new URL('api/v2/report/article-list', rootUrl).href;
     const apiTreeUrl = new URL('api/v2/report/industry-label-tree', rootUrl).href;
 
     const {
-        data: {
-            data: { industryTree, labelTree },
-        },
+        data: { data: treeData },
     } = await got(apiTreeUrl);
+    const { industryTree, labelTree } = treeData;
 
     const industries = parseTree(industryTree);
     const labels = parseTree(labelTree);
@@ -218,7 +217,7 @@ async function handler(ctx) {
 
                 item.title = content('div.title h1').text();
                 item.description += renderDescription({
-                    description: content('div.text').html(),
+                    description: content('div.text').html() ?? undefined,
                 });
                 item.author = content('div.source')
                     .text()
@@ -238,7 +237,7 @@ async function handler(ctx) {
 
     const $ = load(currentResponse);
 
-    const author = $('meta[property="og:title"]').prop('content').split(/-/)[0];
+    const author = $('meta[property="og:title"]').prop('content').split(/-/, 1)[0];
     const categories = [industryObj?.value, labelObj?.value].filter(Boolean);
     const image = $(`img[alt="${author}"]`).prop('src');
     const icon = $('link[rel="shortcut icon"]').prop('href');
@@ -248,7 +247,7 @@ async function handler(ctx) {
         title: `${author}${categories.length === 0 ? '' : ` - ${categories.join(' - ')}`}`,
         link: currentUrl,
         description: $('meta[property="og:description"]').prop('content'),
-        language: 'zh',
+        language: 'zh' as const,
         image,
         icon,
         logo: icon,

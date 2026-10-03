@@ -10,7 +10,7 @@ export const handler = async (ctx) => {
 
     const [pid, sid] = id?.split(/-/) ?? [undefined, undefined];
 
-    const limit = Number.parseInt(ctx.req.query('limit') ?? '30', 10);
+    const limit = Number(ctx.req.query('limit') ?? '30');
 
     const currentUrl = new URL(`discover${id ? `/${id}` : ''}`, rootUrl).href;
 
@@ -63,7 +63,7 @@ export const handler = async (ctx) => {
 
     const items = processItems(apiProcs?.slice(0, limit) ?? []);
 
-    const image = new URL($('img.logo').prop('src'), rootUrl).href;
+    const image = new URL($('img.logo').prop('src')!, rootUrl).href;
 
     const author = $('title').text().split(/_/).pop();
 

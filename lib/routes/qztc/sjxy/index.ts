@@ -70,7 +70,7 @@ async function handler(ctx) {
                 } else if (!link.startsWith('http')) {
                     link = rootUrl.slice(0, -1) + link;
                 }
-                const pubDate = timezone(parseDate(cheerioItem.find('.news_meta').text()), +8);
+                const pubDate = timezone(parseDate(cheerioItem.find('.news_meta').text()), 8);
 
                 return {
                     title,
@@ -101,7 +101,7 @@ async function handler(ctx) {
                     } else {
                         const response = await ofetch(item.link);
                         const $ = load(response);
-                        newItem.description = $('.wp_articlecontent').html() || '';
+                        newItem.description = $('.wp_articlecontent').html() ?? '';
                     }
                 } else {
                     // 涉及到其他站点，不方便做统一的 html 解析，直接返回链接
@@ -116,5 +116,5 @@ async function handler(ctx) {
         title: $('head > title').text() + ' - 泉州师范学院-数学与计算机科学学院 软件学院',
         link: rootUrl + type + '/list.htm',
         item: items,
-    } as Data;
+    } satisfies Data;
 }

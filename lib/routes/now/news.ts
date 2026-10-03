@@ -64,7 +64,7 @@ export const route: Route = {
 
 async function handler(ctx) {
     const { category = '', id = '' } = ctx.req.param();
-    const limit = Number.parseInt(ctx.req.query('limit') || '20', 10);
+    const limit = Number(ctx.req.query('limit') || '20');
     const hasTopicId = id && Object.hasOwn(categories, category);
 
     const rootUrl = 'https://news.now.com';
@@ -83,7 +83,7 @@ async function handler(ctx) {
     }
 
     const response = await ofetch(apiUrl);
-    const isApi = typeof response === 'object' && Array.isArray(response);
+    const isApi = Array.isArray(response);
     const $ = load(response);
 
     let list;
@@ -122,11 +122,11 @@ async function handler(ctx) {
             .toArray()
             .slice(0, limit)
             .map((item) => {
-                item = $(item);
+                const $item = $(item);
 
                 return {
-                    title: item.text(),
-                    link: `${rootUrl}${item.parent().parent().attr('href')}`,
+                    title: $item.text(),
+                    link: `${rootUrl}${$item.parent().parent().attr('href')}`,
                 };
             });
     }

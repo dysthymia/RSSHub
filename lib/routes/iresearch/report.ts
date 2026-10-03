@@ -198,9 +198,13 @@ const idOptions = [
 const defaultType = 1;
 const siteTitle = '艾瑞咨询';
 
+interface ReportItem extends DataItem {
+    detailId?: string | number;
+}
+
 export const handler = async (ctx: Context): Promise<Data> => {
     const { type: paramType = defaultType, id: paramId = '' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '50', 10);
+    const limit = Number(ctx.req.query('limit') ?? '50');
 
     const typeObj = types?.[paramType] ?? Object.values(types).find((obj) => obj.label === paramType || obj.value === paramType);
     if (!typeObj) {
@@ -210,7 +214,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
     const idObj = idOptions.find((option) => option.label === paramId || option.value === paramId);
 
     const type: number = typeObj.value;
-    const id: string | undefined = idObj ? String(idObj.value) : undefined;
+    const id: string | undefined = idObj?.value;
 
     const baseUrl = 'https://www.iresearch.com.cn';
     const imageBaseUrl = 'https://pic.iresearch.cn';
@@ -220,17 +224,15 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
     const response = await ofetch(apiUrl, {
         query: {
-            ...(id
-                ? {
-                      [typeObj.idKey]: id,
-                  }
-                : {}),
+            ...(id && {
+                [typeObj.idKey]: id,
+            }),
             [typeObj.limitKey]: limit,
             ...typeObj.fixedQuery,
         },
     });
 
-    let items: DataItem[] = response.List.slice(0, limit).map((item): DataItem => {
+    let items: ReportItem[] = response.List.slice(0, limit).map((item): ReportItem => {
         const title: string =
             item.reportname ??
             (() => {
@@ -242,7 +244,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                 return item.sTitle ?? item.Content;
             })();
 
-        const images: string[] = [item.BigImg, item.SmallImg, item.reportpic].filter(Boolean) as string[];
+        const images: string[] = [item.BigImg, item.SmallImg, item.reportpic].filter(Boolean);
         const description: string | undefined = renderDescription({
             images: images.map((src) => ({
                 src,
@@ -259,10 +261,10 @@ export const handler = async (ctx: Context): Promise<Data> => {
         const image: string | undefined = images?.[0] ?? undefined;
         const updated: number | string = pubDate;
 
-        let processedItem: DataItem = {
+        let processedItem: ReportItem = {
             title,
             description,
-            pubDate: pubDate ? timezone(parseDate(pubDate), +8) : undefined,
+            pubDate: pubDate ? timezone(parseDate(pubDate), 8) : undefined,
             link: item.id ? new URL(`report/detail?id=${item.id}`, baseUrl).href : (linkUrl ?? (item.Id ? new URL(`chart/detail?id=${item.id}`, baseUrl).href : undefined)),
             category: categories,
             author: authors,
@@ -274,7 +276,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
             },
             image,
             banner: image,
-            updated: updated ? timezone(parseDate(updated), +8) : undefined,
+            updated: updated ? timezone(parseDate(updated), 8) : undefined,
             detailId: item.id ?? (linkUrl ? item.NewsId : item.Id),
         };
 
@@ -342,11 +344,11 @@ export const handler = async (ctx: Context): Promise<Data> => {
                     data.reportpic,
                     ...Array.from(
                         {
-                            length: Number.parseInt(data.PagesCount ?? data.pagesCount, 10),
+                            length: Number(data.PagesCount ?? data.pagesCount),
                         },
                         (_, index) => `${imageBaseUrl}/${typeObj.imageSlug}/${item.detailId}/${index + 1}.jpg`
                     ),
-                ].filter(Boolean) as string[];
+                ].filter(Boolean);
                 const description: string | undefined = renderDescription({
                     images: images.map((src) => ({
                         src,
@@ -362,7 +364,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                 let processedItem: DataItem = {
                     title,
                     description,
-                    pubDate: pubDate ? timezone(parseDate(pubDate), +8) : undefined,
+                    pubDate: pubDate ? timezone(parseDate(pubDate), 8) : undefined,
                     category: categories,
                     content: {
                         html: description,
@@ -370,7 +372,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                     },
                     image,
                     banner: image,
-                    updated: updated ? timezone(parseDate(updated), +8) : undefined,
+                    updated: updated ? timezone(parseDate(updated), 8) : undefined,
                 };
 
                 const medias: Record<string, Record<string, string>> = (() => {

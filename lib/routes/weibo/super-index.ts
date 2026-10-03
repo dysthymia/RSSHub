@@ -49,12 +49,19 @@ interface Card {
     card_group?: Card[];
 }
 
+type ContainerData = {
+    cards?: Card[];
+    pageInfo?: {
+        page_title: string;
+    };
+};
+
 async function handler(ctx) {
     const id = ctx.req.param('id');
     const type = ctx.req.param('type') ?? 'feed';
 
-    const containerData = (await weiboUtils.tryWithCookies((cookies, verifier) =>
-        cache.tryGet(
+    const containerData = await weiboUtils.tryWithCookies((cookies, verifier) =>
+        cache.tryGet<ContainerData>(
             `weibo:super_index:container:${id}:${type}`,
             async () => {
                 const _r = await got('https://m.weibo.cn/api/container/getIndex', {
@@ -75,22 +82,19 @@ async function handler(ctx) {
             config.cache.routeExpire,
             false
         )
-    )) as {
-        cards?: Card[];
-        pageInfo?: {
-            page_title: string;
-        };
-    };
+    );
 
     const resultItems = [];
 
     function handleCard(ctx, card, resultItems) {
-        if (card.card_type === '9' && 'mblog' in card) {
-            const formatExtended = weiboUtils.formatExtended(ctx, card.mblog, undefined);
-            resultItems.push(formatExtended);
+        if (card.card_type !== '9' || !('mblog' in card)) {
+            return;
         }
+        const formatExtended = weiboUtils.formatExtended(ctx, card.mblog, undefined);
+        resultItems.push(formatExtended);
     }
-    for (const card of containerData?.cards ?? []) {
+    const cards = containerData?.cards ?? [];
+    for (const card of cards) {
         handleCard(ctx, card, resultItems);
         if (!('card_group' in card)) {
             continue;

@@ -80,7 +80,7 @@ async function handler(ctx: Context): Promise<Data> {
     }
 
     const response = await got(currentUrl);
-    const $ = load(response.data as any);
+    const $ = load(response.data);
 
     const selector = 'form .newItem';
     const items: DataItem[] = $(selector)
@@ -89,7 +89,11 @@ async function handler(ctx: Context): Promise<Data> {
             const $item = $(item);
             const title = $item.find('.showname a').text().trim();
             const category = $item.find('.showtype').text().trim();
-            const pubDate = ($item.find('.showdate').contents()[0] as any).data.trim();
+            const dateNode = $item.find('.showdate').contents()[0];
+            if (dateNode?.nodeType !== 3) {
+                throw new Error(`3kns: no release date text found for "${title}"`);
+            }
+            const pubDate = dateNode.data.trim();
             return {
                 title,
                 link: baseUrl + $item.find('.entry-media a').attr('href')!,
@@ -98,7 +102,11 @@ async function handler(ctx: Context): Promise<Data> {
                 description:
                     renderToString(
                         <ThreeKnsDescription
-                            cover={$item.find('.entry-media img').attr('src')?.trim().replace('.', baseUrl)}
+                            cover={$item
+                                .find('.entry-media img')
+                                .attr('src')
+                                ?.trim()
+                                .replace('.', () => baseUrl)}
                             title={title}
                             tid={$item.find('.jb-chakan').text().trim()}
                             category={category}
@@ -114,7 +122,7 @@ async function handler(ctx: Context): Promise<Data> {
 
     return {
         title: $('title').text(),
-        link: currentUrl.toString(),
+        link: currentUrl.href,
         allowEmpty: true,
         item: items,
     };

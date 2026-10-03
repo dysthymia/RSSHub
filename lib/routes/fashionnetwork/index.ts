@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -10,7 +10,7 @@ import { renderDescription } from './templates/description';
 
 export const handler = async (ctx) => {
     const { id = '0' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 20;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 20;
 
     const rootUrl = 'https://fashionnetwork.cn';
     const currentUrl = new URL(`lists/${id}`, rootUrl).href;
@@ -19,17 +19,17 @@ export const handler = async (ctx) => {
 
     const $ = load(response);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = $('div.home__item')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
-            const title = item.find('h2.family-title').text();
+            const title = $item.find('h2.family-title').text();
 
-            const src = item.find('img.item__img').first().prop('src') ?? undefined;
+            const src = $item.find('img.item__img').prop('src') ?? undefined;
             const image = src ? new URL(src, rootUrl).href : undefined;
 
             const description = renderDescription({
@@ -46,7 +46,7 @@ export const handler = async (ctx) => {
             return {
                 title,
                 description,
-                link: new URL(item.find('h2.family-title a').prop('href'), rootUrl).href,
+                link: new URL($item.find('h2.family-title a').prop('href')!, rootUrl).href,
                 image,
                 banner: image,
                 language,
@@ -58,21 +58,20 @@ export const handler = async (ctx) => {
 
     items = await Promise.all(
         items.map((item) =>
-            cache.tryGet(item.link, async () => {
+            cache.tryGet(item.link!, async () => {
                 const { data: detailResponse } = await got(item.link);
 
                 const $$ = load(detailResponse);
 
                 const title = $$('h1.newsTitle').text();
                 const description = renderDescription({
-                    description: $$('div.article-content').html(),
+                    description: $$('div.article-content').html() ?? undefined,
                 });
 
                 item.title = title;
                 item.description = description;
-                item.pubDate = timezone(parseDate($$('span.time-ago').first().text().trim()), +8);
+                item.pubDate = timezone(parseDate($$('span.time-ago').first().text().trim()), 8);
                 item.category = $$('div.newsTags')
-                    .first()
                     .find('div.news-tag')
                     .toArray()
                     .map((c) => $$(c).text());
@@ -88,8 +87,8 @@ export const handler = async (ctx) => {
         )
     );
 
-    const label = $(`label[for="news_categs_${id}"]`).text()?.split(/\(/)?.[0]?.trim() ?? '';
-    const image = new URL($('div.header__fnw-logo img').prop('src'), rootUrl).href;
+    const label = $(`label[for="news_categs_${id}"]`).text()?.split(/\(/, 1)?.[0]?.trim() ?? '';
+    const image = new URL($('div.header__fnw-logo img').prop('src')!, rootUrl).href;
 
     return {
         title: `${label}${$('title').text()}`,

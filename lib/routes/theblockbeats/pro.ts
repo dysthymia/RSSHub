@@ -82,7 +82,10 @@ async function handler(ctx: Context): Promise<Data> {
         throw new ConfigNotFoundError('BlockBeats API key is missing. Please set BLOCKBEATS_API_KEY.');
     }
 
-    const size = Math.min(Number.parseInt(ctx.req.query('limit') || `${defaultSize}`, 10) || defaultSize, maxSize);
+    // 将请求条数归一化为安全范围内的整数。
+    const requestedSize = Number(ctx.req.query('limit'));
+    const parsedSize = Number.isFinite(requestedSize) ? Math.trunc(requestedSize) : defaultSize;
+    const size = Math.min(Math.max(parsedSize || defaultSize, 1), maxSize);
     const rawResponse = await ofetch<string>(`${apiBaseUrl}${channelConfig.endpoint}`, {
         query: {
             page: 1,

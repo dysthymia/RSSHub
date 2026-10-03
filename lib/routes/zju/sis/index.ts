@@ -87,9 +87,7 @@ async function enrichNewsItemWithDetails(item: DataItem, refererUrl: string): Pr
 
             // Extract and set the full article content as description
             const description = $('.wp_articlecontent').html();
-            if (description) {
-                item.description = description;
-            }
+            item.description = description;
 
             // Extract and clean the author information
             let author = $('.arti_metas').find('.arti_publisher').text();
@@ -135,13 +133,13 @@ export const route: Route = {
  * @param ctx - The request context containing route parameters
  * @returns Promise with RSS feed data including title, link, and news items
  */
-async function handleSisRequest(ctx: { req: { param: (arg0: string) => string } }) {
+async function handleSisRequest(ctx) {
     const requestedType = Number.parseInt(ctx.req.param('type'));
     const categoryInfo = categoryMap.get(requestedType);
 
     // Validate the requested category type
     if (!categoryInfo) {
-        const validTypes = [...categoryMap.keys()].join(', ');
+        const validTypes = categoryMap.keys().toArray().join(', ');
         throw new Error(`Invalid type: ${requestedType}. Valid types are: ${validTypes}`);
     }
 

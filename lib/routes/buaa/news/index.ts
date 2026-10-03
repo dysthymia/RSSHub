@@ -44,23 +44,23 @@ async function handler(ctx: Context): Promise<Data> {
             return {
                 title: title.text(),
                 link: new URL(title.attr('href')!, baseUrl).href,
-                pubDate: timezone(parseDate(item.find('h2 em').text(), '[YYYY-MM-DD]'), +8),
+                pubDate: timezone(parseDate(item.find('h2 em').text(), '[YYYY-MM-DD]'), 8),
             };
         });
 
-    const result = (await Promise.all(
+    const result = await Promise.all(
         list.map((item) =>
             cache.tryGet(item.link!, async () => {
                 const response = await got(item.link);
                 const $ = load(response.data);
 
-                item.description = $('.v_news_content').html() || '';
+                item.description = $('.v_news_content').html();
                 item.author = $('.vsbcontent_end').text().trim();
 
                 return item;
             })
         )
-    )) as DataItem[];
+    );
 
     return {
         title: `北航新闻 - ${title}`,

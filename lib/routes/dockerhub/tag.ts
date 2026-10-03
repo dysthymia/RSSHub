@@ -42,7 +42,7 @@ async function handler(ctx) {
         title: `${namespace} tags`,
         description: metadata.data.description,
         link,
-        language: 'en',
+        language: 'en' as const,
         item: tags.map((item) => {
             const architectures = item.images?.length ? item.images.map((img) => `${img.os}/${img.architecture}`).join(', ') : 'unknown architectures';
 

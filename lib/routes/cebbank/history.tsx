@@ -44,12 +44,10 @@ async function handler(ctx) {
     const $ = load(res.data);
 
     const items = $('.lczj_box tbody tr')
+        .slice(2)
         .toArray()
-        .map((e, i) => {
-            if (i < 2) {
-                return null;
-            }
-            const c = load(e, { decodeEntities: false });
+        .map((e) => {
+            const c = load(e);
             return {
                 title: c('td:nth-child(1)').text(),
                 description: renderToString(

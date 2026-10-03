@@ -54,7 +54,11 @@ export const route: Route = {
                 const item = $(item_);
                 const title = item.find('.remarkup-header').first();
                 const subtitle = item.find('.phui-document-summary-subtitle').first();
-                const date = subtitle.find('strong').first()[0].nextSibling.data.slice(4); // parse starts after ' on '
+                const dateNode = subtitle.find('strong').first()[0].nextSibling;
+                if (dateNode?.nodeType !== 3) {
+                    throw new Error('Cannot find the post date in the blog summary');
+                }
+                const date = dateNode.data.slice(4); // parse starts after ' on '
                 return {
                     title: title.text(),
                     // We need an absolute URL for `link`, but `a.attr('href')` returns a relative URL.

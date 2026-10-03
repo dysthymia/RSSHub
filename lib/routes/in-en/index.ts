@@ -6,7 +6,7 @@ import ofetch from '@/utils/ofetch';
 import { parseRelativeDate } from '@/utils/parse-date';
 
 // Subdomain config: name = channel display name, newsPath = news list path
-const CATEGORIES: Record<string, { name: string; newsPath: string }> = {
+const CATEGORIES = {
     solar: { name: '光伏太阳能', newsPath: '/news/' },
     wind: { name: '风电', newsPath: '/windnews/' },
     chuneng: { name: '储能', newsPath: '/news/' },
@@ -16,6 +16,7 @@ const CATEGORIES: Record<string, { name: string; newsPath: string }> = {
     power: { name: '电力', newsPath: '/news/' },
     huanbao: { name: '环保', newsPath: '/policy/' },
 };
+const isCategory = (s: string): s is keyof typeof CATEGORIES => Object.hasOwn(CATEGORIES, s);
 
 export const route: Route = {
     path: '/news/:type',
@@ -47,10 +48,10 @@ export const route: Route = {
 
     async handler(ctx) {
         const type = ctx.req.param('type')!;
-        const cat = CATEGORIES[type];
-        if (!cat) {
+        if (!isCategory(type)) {
             throw new Error(`Unknown channel type: ${type}. Valid values: ${Object.keys(CATEGORIES).join(', ')}`);
         }
+        const cat = CATEGORIES[type];
 
         const baseUrl = `https://${type}.in-en.com`;
         const listUrl = `${baseUrl}${cat.newsPath}`;
@@ -69,14 +70,14 @@ export const route: Route = {
                 const $el = $(el);
                 const $a = $el.find('.listTxt h5 a');
                 const link = $a.attr('href') ?? '';
-                const title = $a.attr('title')?.trim() || $a.text().trim();
+                const title = $a.attr('title') || $a.text();
 
                 const pubDateRaw = $el.find('.listTxt .prompt > i').text().trim();
-                const author = $el.find('.listTxt .prompt > span').first().text().replace('来源：', '').trim();
+                const author = $el.find('.listTxt .prompt > span').first().text().replace('来源：', '');
                 const category = $el
                     .find('.listTxt .prompt > span:not(:first-of-type) em a')
                     .toArray()
-                    .map((a) => $(a).text().trim())
+                    .map((a) => $(a).text())
                     .filter(Boolean);
 
                 return {
@@ -85,9 +86,9 @@ export const route: Route = {
                     author,
                     category,
                     pubDate: pubDateRaw ? parseRelativeDate(pubDateRaw) : undefined,
-                } as DataItem;
+                };
             })
-            .filter((item) => Boolean(item.title && item.link));
+            .filter((item) => item.title && item.link);
 
         const items = await Promise.all(
             list.map((item) =>
@@ -95,9 +96,9 @@ export const route: Route = {
                     const detail = await ofetch(item.link!);
                     const $d = load(detail);
 
-                    item.description = $d('#article').html() ?? undefined;
+                    item.description = $d('#article').html();
 
-                    const detailAuthor = $d('p.source a').text().trim();
+                    const detailAuthor = $d('p.source a').text();
                     if (detailAuthor) {
                         item.author = detailAuthor;
                     }
@@ -110,7 +111,7 @@ export const route: Route = {
         return {
             title: `国际能源网 · ${cat.name}`,
             link: listUrl,
-            item: items as DataItem[],
+            item: items,
         };
     },
 };

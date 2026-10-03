@@ -54,7 +54,7 @@ async function handler(ctx) {
         title: item.HeadLine,
         link: item.PageUrl,
         category: item.ClassName,
-        pubDate: timezone(parseDate(item.CreateTime), +8),
+        pubDate: timezone(parseDate(item.CreateTime), 8),
     }));
 
     const items = await Promise.all(
@@ -72,6 +72,7 @@ async function handler(ctx) {
                 });
 
                 const image = content('meta[property="og:image"]').attr('content');
+                const paragraph = content('.paragraph').html();
                 const matches = detailResponse.data.match(/var pAudio_url = "(.*)\.mp3";/);
 
                 if (matches) {
@@ -83,7 +84,7 @@ async function handler(ctx) {
                 item.description = renderToString(
                     <>
                         <img src={image} />
-                        <div>{content('.paragraph').html() ? raw(content('.paragraph').html() as string) : null}</div>
+                        <div>{paragraph ? raw(paragraph) : null}</div>
                     </>
                 );
 

@@ -1,6 +1,7 @@
 import { load } from 'cheerio';
 import pMap from 'p-map';
 
+import InvalidParameterError from '@/errors/types/invalid-parameter';
 import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
@@ -13,7 +14,7 @@ type NewsCategory = {
 
 const WEBSITE_URL = 'http://www.cpta.com.cn';
 
-const NEWS_TYPES: Record<string, NewsCategory> = {
+const NEWS_TYPES = {
     notice: {
         title: '通知公告',
         baseUrl: 'http://www.cpta.com.cn/notice.html',
@@ -24,10 +25,15 @@ const NEWS_TYPES: Record<string, NewsCategory> = {
         baseUrl: 'http://www.cpta.com.cn/performance.html',
         description: '中国人事考试网 考试成绩公布汇总',
     },
-};
+} satisfies Record<string, NewsCategory>;
+
+const isNewsType = (category: string): category is keyof typeof NEWS_TYPES => Object.hasOwn(NEWS_TYPES, category);
 
 const handler: Route['handler'] = async (ctx) => {
     const category = ctx.req.param('category');
+    if (!category || !isNewsType(category)) {
+        throw new InvalidParameterError(`Invalid category: ${category}. Use notice or performance.`);
+    }
     const BASE_URL = NEWS_TYPES[category].baseUrl;
     // Fetch the index page
     const { data: listResponse } = await got(BASE_URL);
@@ -55,7 +61,7 @@ const handler: Route['handler'] = async (ctx) => {
         .slice(0, 10);
 
     const fetchDataItem = (item: { title: string; date: string; link: string }) =>
-        cache.tryGet(item.link, async () => {
+        cache.tryGet(item.link, async (): Promise<DataItem> => {
             const CONTENT_SELECTOR = '#p_content';
             const { data: contentResponse } = await got(item.link);
             const contentPage = load(contentResponse);
@@ -75,7 +81,7 @@ const handler: Route['handler'] = async (ctx) => {
                 },
                 updated: item.date,
                 language: 'zh-CN',
-            } as DataItem;
+            };
         });
 
     const dataItems: DataItem[] = await pMap(contentLinkList, fetchDataItem, { concurrency: 1 });

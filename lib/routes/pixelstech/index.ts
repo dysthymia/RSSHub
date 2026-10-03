@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
@@ -13,19 +13,19 @@ import { renderDescription } from './templates/description';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { topic } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '10', 10);
+    const limit = Number(ctx.req.query('limit') ?? '10');
 
     const baseUrl = 'https://www.pixelstech.net';
     const targetUrl: string = new URL(`feed/${topic ?? ''}`, baseUrl).href;
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
-    const language = $('html').attr('lang') ?? 'en';
+    const language = ($('html').attr('lang') ?? 'en') as Language;
 
     let items: DataItem[] = $('div.feed-item')
         .slice(0, limit)
         .toArray()
-        .map((el): Element => {
+        .map((el) => {
             const $el: Cheerio<Element> = $(el);
             const $aEl: Cheerio<Element> = $el.find('a.feed-item-link');
 
@@ -75,7 +75,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
             return cache.tryGet(item.link, async (): Promise<DataItem> => {
                 try {
-                    const detailResponse = await ofetch(item.link);
+                    const detailResponse = await ofetch(item.link!);
                     const $$: CheerioAPI = load(detailResponse);
 
                     $$('div.login-prompt').remove();

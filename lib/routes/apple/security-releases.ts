@@ -3,20 +3,27 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import InvalidParameterError from '@/errors/types/invalid-parameter';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
+import { isValidHost } from '@/utils/valid-host';
 
 import { renderDescription } from './templates/security-releases';
 
 export const handler = async (ctx: Context): Promise<Data> => {
-    const { language = 'en-us' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '30', 10);
+    const { language: languageParam = 'en-us' } = ctx.req.param();
+    if (!isValidHost(languageParam)) {
+        throw new InvalidParameterError('Invalid language');
+    }
+
+    const language = languageParam as Language;
+    const limit = Number(ctx.req.query('limit') ?? '30');
 
     const baseUrl = 'https://support.apple.com';
-    const targetUrl: string = new URL(`${language}/100100`, baseUrl).href;
+    const targetUrl: string = new URL(`${languageParam}/100100`, baseUrl).href;
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
@@ -30,7 +37,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
     let items: DataItem[] = $trEls
         .slice(1, limit)
         .toArray()
-        .map((el): Element => {
+        .map((el) => {
             const $el: Cheerio<Element> = $(el);
 
             const titleEl: Cheerio<Element> = $el.find('td').first();
@@ -71,7 +78,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
             }
 
             return cache.tryGet(item.link, async (): Promise<DataItem> => {
-                const detailResponse = await ofetch(item.link);
+                const detailResponse = await ofetch(item.link!);
                 const $$: CheerioAPI = load(detailResponse);
 
                 const title: string = item.title ?? $$('h1.gb-header').text();
@@ -81,7 +88,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                 const description: string | undefined =
                     item.description +
                     renderDescription({
-                        description: $$('div#sections').html(),
+                        description: $$('div#sections').html() ?? undefined,
                     });
                 const pubDateStr: string | undefined = detailResponse.match(/publish_date:\s"(\d{8})",/, '')?.[1];
                 const authors: DataItem['author'] = $$('meta[property="og:site_name"]').attr('content');

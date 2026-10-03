@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
@@ -11,19 +11,19 @@ import { parseDate } from '@/utils/parse-date';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { id = 'home/zxdt' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '20', 10);
+    const limit = Number(ctx.req.query('limit') ?? '20');
 
     const baseUrl = 'https://www.investor.org.cn';
-    const targetUrl: string = new URL(id.endsWith('/') ? id : `${id}/`, baseUrl).href;
+    const targetUrl = `${baseUrl}/${id.endsWith('/') ? id : `${id}/`}`;
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
-    const language = $('html').attr('lang') ?? 'zh';
+    const language = ($('html').attr('lang') ?? 'zh') as Language;
 
     let items: DataItem[] = $('div.right_content_item a')
         .slice(0, limit)
         .toArray()
-        .map((el): Element => {
+        .map((el) => {
             const $el: Cheerio<Element> = $(el);
 
             const title: string = $el.find('div.title').text();
@@ -49,11 +49,11 @@ export const handler = async (ctx: Context): Promise<Data> => {
             }
 
             return cache.tryGet(item.link, async (): Promise<DataItem> => {
-                const detailResponse = await ofetch(item.link);
+                const detailResponse = await ofetch(item.link!);
                 const $$: CheerioAPI = load(detailResponse);
 
-                const title: string = $$('div.text_content_detail_title h1').text() ?? item.title;
-                const description: string | undefined = $$('div.trs_editor_view').html() ?? undefined;
+                const title: string = $$('div.text_content_detail_title h1').text();
+                const description = $$('div.trs_editor_view').html();
                 const pubDateStr: string | undefined = $$('div.base_info_left span')
                     .toArray()
                     .some((el) => $$(el).text().includes('时间'))
@@ -90,14 +90,15 @@ export const handler = async (ctx: Context): Promise<Data> => {
     );
 
     const title: string = $('title').text();
+    const imageSrc: string | undefined = $('div.fl a img').attr('src');
 
     return {
         title,
-        description: title.split(/\|/)?.[0],
+        description: title.split(/\|/, 1)?.[0],
         link: targetUrl,
         item: items,
         allowEmpty: true,
-        image: $('div.fl a img').attr('src') ? new URL($('div.fl a img').attr('src') as string, baseUrl).href : undefined,
+        image: imageSrc ? new URL(imageSrc, baseUrl).href : undefined,
         author: title.split(/\|/).pop(),
         language,
         id: targetUrl,

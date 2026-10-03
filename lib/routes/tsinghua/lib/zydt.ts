@@ -1,13 +1,13 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
 export const handler = async (ctx) => {
     const { category } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 10;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 10;
 
     const rootUrl = 'https://lib.tsinghua.edu.cn';
     const currentUrl = new URL(`zydt${category ? `/${category}` : ''}.htm`, rootUrl).href;
@@ -16,19 +16,19 @@ export const handler = async (ctx) => {
 
     const $ = load(response);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = $('ul.notice-list li')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem & { link: string } => {
+            const $item = $(item);
 
             return {
-                title: item.find('div.notice-list-tt a').text(),
-                pubDate: parseDate(item.find('div.notice-date').text(), 'YYYY/MM/DD'),
-                link: new URL(item.find('div.notice-list-tt a').prop('href'), rootUrl).href,
-                category: item
+                title: $item.find('div.notice-list-tt a').text(),
+                pubDate: parseDate($item.find('div.notice-date').text(), 'YYYY/MM/DD'),
+                link: new URL($item.find('div.notice-list-tt a').prop('href')!, rootUrl).href,
+                category: $item
                     .find('div.notice-label')
                     .toArray()
                     .map((c) => $(c).text()),
@@ -60,7 +60,7 @@ export const handler = async (ctx) => {
     );
 
     const title = $('title').text();
-    const image = new URL($('div.logo a img').prop('href'), rootUrl).href;
+    const image = new URL($('div.logo a img').prop('href')!, rootUrl).href;
 
     return {
         title,

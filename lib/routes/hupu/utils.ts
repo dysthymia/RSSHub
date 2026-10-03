@@ -13,7 +13,7 @@ export function extractNextData<T = unknown>(html: string, url?: string): T {
     }
 
     try {
-        return JSON.parse(scriptMatch[1]) as T;
+        return JSON.parse(scriptMatch[1]);
     } catch (error) {
         throw new Error(`Failed to parse __NEXT_DATA__ JSON: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
@@ -198,9 +198,9 @@ export async function getGameStatus(matchID: string): Promise<string | null> {
             matchId: matchID,
         },
     });
-    const data = res.data;
+    const data: { result?: GameStatusResult } | null = res.data;
     if (data?.result && data.result.playerStats && data.result.matchStats && data.result.teamStats) {
-        const html = generateGameStatusHtml(data.result as GameStatusResult);
+        const html = generateGameStatusHtml(data.result);
         return html;
     }
     return null;
@@ -238,8 +238,8 @@ export function getEntryDetails(item: DataItem): Promise<DataItem> {
             // Possible formats: 10:21, 45分钟前, 09-15 19:57
             const currentYear = new Date().getFullYear();
             const currentDate = new Date();
-            const monthDayTimePattern = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
-            const timeOnlyPattern = /^(\d{1,2}):(\d{2})$/;
+            const monthDayTimePattern = /^\d{2}-\d{2} \d{2}:\d{2}$/;
+            const timeOnlyPattern = /^\d{1,2}:\d{2}$/;
             let processedDateString = pubDateString;
 
             if (monthDayTimePattern.test(pubDateString)) {
@@ -250,7 +250,7 @@ export function getEntryDetails(item: DataItem): Promise<DataItem> {
                 processedDateString = `${currentYear}-${month}-${day} ${pubDateString}`;
             }
 
-            const pubDate = [item.pubDate, timezone(parseDate(processedDateString), +8), timezone(parseRelativeDate(pubDateString), +8)].find((d) => d instanceof Date && !Number.isNaN(d.getTime()));
+            const pubDate = [item.pubDate, timezone(parseDate(processedDateString), 8), timezone(parseRelativeDate(pubDateString), 8)].find((d) => d instanceof Date && !Number.isNaN(d.getTime()));
             const categories = content('.basketballTobbs_tag > a, .tag-player-team')
                 .toArray()
                 .map((c) => content(c).text())

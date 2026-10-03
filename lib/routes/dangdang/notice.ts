@@ -10,10 +10,6 @@ const typeMap = {
     2: '规则变更',
 };
 
-/**
- *
- * @param ctx {import('koa').Context}
- */
 export const route: Route = {
     path: '/notice/:type?',
     categories: ['programming'],
@@ -48,7 +44,7 @@ async function handler(ctx) {
         documentId: item.documentId,
         source: `https://open.dangdang.com/op-api/developer-platform/document/info/get?document_id=${item.documentId}`,
         link: `https://open.dangdang.com/home/notice/message/1/${item.documentId}`,
-        pubDate: timezone(parseDate(item.modifyTime), +8),
+        pubDate: timezone(parseDate(item.modifyTime), 8),
     }));
 
     const result = await Promise.all(

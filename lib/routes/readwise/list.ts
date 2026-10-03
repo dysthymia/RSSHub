@@ -89,7 +89,7 @@ async function handler(ctx) {
         }
     }
 
-    const fullData = [];
+    const fullData: any[] = [];
 
     async function fetchNextPage(url) {
         const response = await ofetch(url, {
@@ -114,7 +114,7 @@ async function handler(ctx) {
             }
 
             // Check if item.tags exist and match the criteria based on tagStrategy
-            const itemTags = item.tags;
+            const itemTags: Record<string, { name: string }> | undefined = item.tags;
 
             if (!itemTags) {
                 return false; // If item has no tags and tag filter is applied, exclude it
@@ -124,7 +124,8 @@ async function handler(ctx) {
                 if (tagStrategy === TAG_STRATEGY_ANY) {
                     // Filter if any of the tags match
                     return tag.some((t) => Object.values(itemTags).some((tagObj) => tagObj.name === t));
-                } else if (tagStrategy === TAG_STRATEGY_ALL) {
+                }
+                if (tagStrategy === TAG_STRATEGY_ALL) {
                     // Filter if all tags match
                     return tag.every((t) => Object.values(itemTags).some((tagObj) => tagObj.name === t));
                 }

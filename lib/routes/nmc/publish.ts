@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
@@ -13,7 +13,7 @@ import { renderDescription } from './templates/description';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { id = 'hourly-temperature/html' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '50', 10);
+    const limit = Number(ctx.req.query('limit') ?? '50');
 
     const baseUrl = 'https://www.nmc.cn';
     const pathSegment: string = id.split(/\//).pop() === 'htm' ? 'htm' : 'html';
@@ -21,25 +21,25 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
-    const language = $('html').attr('lang') ?? 'zh';
+    const language = ($('html').attr('lang') ?? 'zh') as Language;
 
     const items: DataItem[] =
         $('div.row div[data-img]').length === 0
             ? $('div#text')
                   .slice(0, limit)
                   .toArray()
-                  .map((el): Element => {
+                  .map((el) => {
                       const $el: Cheerio<Element> = $(el);
 
                       const timeStrArray = $el
                           .find('div.author b')
                           .toArray()
-                          .map((el) => $(el).text().trim());
+                          .map((el) => $(el).text());
                       const pubDateStr: string | undefined = `${timeStrArray.pop()}:00 ${timeStrArray.join('/')}`;
 
                       const title = `${pubDateStr} - ${$el.find('div.title').text().replaceAll(/\s/g, '')}`;
                       const description: string | undefined = renderDescription({
-                          description: $el.find('div.writing').html(),
+                          description: $el.find('div.writing').html() ?? undefined,
                       });
 
                       const linkUrl: string | undefined = targetUrl;
@@ -51,7 +51,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                           .split(/\s/)
                           .filter(Boolean)
                           .map((name) => ({
-                              name: name.split(/：/).pop(),
+                              name: name.split(/：/).pop()!,
                               url: undefined,
                               avatar: undefined,
                           }));
@@ -61,7 +61,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                       const processedItem: DataItem = {
                           title,
                           description,
-                          pubDate: timezone(parseDate(pubDateStr, 'HH:mm YYYY/MM/DD'), +8),
+                          pubDate: timezone(parseDate(pubDateStr, 'HH:mm YYYY/MM/DD'), 8),
                           link: linkUrl ? new URL(linkUrl, baseUrl).href : undefined,
                           author: authors,
                           guid,
@@ -70,7 +70,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                               html: description,
                               text: description,
                           },
-                          updated: timezone(parseDate(upDatedStr, 'HH:mm YYYY/MM/DD'), +8),
+                          updated: timezone(parseDate(upDatedStr, 'HH:mm YYYY/MM/DD'), 8),
                           language,
                       };
 
@@ -79,14 +79,14 @@ export const handler = async (ctx: Context): Promise<Data> => {
             : $('div[data-img]')
                   .slice(0, limit)
                   .toArray()
-                  .map((el): Element => {
+                  .map((el) => {
                       const $el: Cheerio<Element> = $(el);
 
                       const image: string | undefined = $el.attr('data-img');
 
                       const title = `${$el.find('div').text().trim()} - ${$('div.nav1 a.actived, div#menuNavBar button.dropdown-toggle')
                           .toArray()
-                          .map((el) => $(el).text().trim())
+                          .map((el) => $(el).text())
                           .join(' - ')}`;
                       const description: string | undefined = renderDescription({
                           images: image
@@ -107,7 +107,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                       const processedItem: DataItem = {
                           title,
                           description,
-                          pubDate: timezone(parseDate(pubDateStr), +8),
+                          pubDate: timezone(parseDate(pubDateStr), 8),
                           link: linkUrl ? new URL(linkUrl, baseUrl).href : undefined,
                           guid,
                           id: guid,
@@ -117,7 +117,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                           },
                           image,
                           banner: image,
-                          updated: timezone(parseDate(upDatedStr), +8),
+                          updated: timezone(parseDate(upDatedStr), 8),
                           language,
                       };
 

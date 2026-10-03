@@ -3,14 +3,20 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
+import InvalidParameterError from '@/errors/types/invalid-parameter';
 import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
+import { isValidHost } from '@/utils/valid-host';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const locale = ctx.req.param('locale');
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '100', 10);
+    if (locale && !isValidHost(locale)) {
+        throw new InvalidParameterError('Invalid locale');
+    }
+
+    const limit = Number(ctx.req.query('limit') ?? '100');
 
     const baseUrl = 'https://cursor.com';
     const localeSegment = locale ? `/${locale}` : '';
@@ -29,11 +35,11 @@ export const handler = async (ctx: Context): Promise<Data> => {
             const $el: Cheerio<Element> = $(el);
 
             const timeEl = $el.find('time').first();
-            const pubDateStr = timeEl.attr('datetime') || timeEl.text().trim();
-            const versionLabel = timeEl.closest('a').find('.label').text().trim();
+            const pubDateStr = timeEl.attr('datetime') || timeEl.text();
+            const versionLabel = timeEl.closest('a').find('.label').text();
 
-            const linkEl = $el.find('h1 a').first();
-            const titleText = linkEl.length ? linkEl.text().trim() : $el.find('h1').first().text().trim();
+            const linkEl = $el.find('h1 a');
+            const titleText = linkEl.length ? linkEl.text() : $el.find('h1').text();
             const title: string = versionLabel ? `[${versionLabel}] ${titleText}` : titleText;
 
             const linkUrl: string | undefined = linkEl.attr('href');
@@ -42,7 +48,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
                 guid = `cursor-changelog-${versionLabel}`;
             }
 
-            const description: string = $el.find('.prose').html() || '';
+            const description = $el.find('.prose').html();
 
             const processedItem: DataItem = {
                 title,

@@ -2,7 +2,7 @@ import { load } from 'cheerio';
 import iconv from 'iconv-lite';
 
 import InvalidParameterError from '@/errors/types/invalid-parameter';
-import type { Route } from '@/types';
+import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -122,7 +122,8 @@ async function handler(ctx) {
     const cfg = config[category];
     if (!cfg) {
         throw new InvalidParameterError('Bad category. See <a href="https://docs.rsshub.app/routes/new-media#wang-yi-xin-wen-pai-hang-bang">docs</a>');
-    } else if ((category !== 'whole' && type === 'click' && time === 'month') || (category === 'whole' && type === 'click' && time === 'hour') || (type === 'follow' && time === 'hour')) {
+    }
+    if ((category !== 'whole' && type === 'click' && time === 'month') || (category === 'whole' && type === 'click' && time === 'hour') || (type === 'follow' && time === 'hour')) {
         throw new InvalidParameterError('Bad timeRange range. See <a href="https://docs.rsshub.app/routes/new-media#wang-yi-xin-wen-pai-hang-bang">docs</a>');
     }
 
@@ -139,24 +140,25 @@ async function handler(ctx) {
         .eq(timeRange[time].index + (category === 'whole' ? (type === 'click' ? -1 : 2) : type === 'click' ? 0 : 2))
         .find('table tbody tr td a')
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
             return {
-                link: item.attr('href'),
+                link: $item.attr('href'),
+                title: '',
             };
         });
 
     const items = await Promise.all(
         list.map((item) =>
-            cache.tryGet(item.link, async () => {
+            cache.tryGet(item.link!, async () => {
                 try {
                     let link;
-                    if (category === 'auto' || category === 'house' || category === 'travel') {
-                        const category = item.link.split('.163.com')[0].split('//').pop().split('.').pop();
-                        link = `https://3g.163.com/${category}/article/${item.link.split('/').pop()}`;
+                    if (['auto', 'house', 'travel'].includes(category)) {
+                        const category = item.link!.split('.163.com', 1)[0].split('//').pop()!.split('.').pop();
+                        link = `https://3g.163.com/${category}/article/${item.link!.split('/').pop()}`;
                     } else {
-                        const pathname = new URL(item.link).pathname;
+                        const pathname = new URL(item.link!).pathname;
                         link = `https://3g.163.com${pathname}`;
                     }
 
@@ -174,8 +176,8 @@ async function handler(ctx) {
                         elem.attribs.src = elem.attribs['data-src'] ?? elem.attribs.src;
                     });
 
-                    item.title = content('meta[property="og:title"]').attr('content').replace('_手机网易网', '');
-                    item.pubDate = parseDate(content('meta[property="og:release_date"]').attr('content'));
+                    item.title = content('meta[property="og:title"]').attr('content')!.replace('_手机网易网', '');
+                    item.pubDate = parseDate(content('meta[property="og:release_date"]').attr('content')!);
                     item.description = content('.article-body').html();
                 } catch {
                     return '';
@@ -189,6 +191,6 @@ async function handler(ctx) {
     return {
         title: `网易新闻${timeRange[time].title}${type === 'click' ? '点击' : '跟帖'}榜 - ${cfg.title}`,
         link: currentUrl,
-        item: items.filter(Boolean),
+        item: items.filter((item): item is DataItem => Boolean(item)),
     };
 }

@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
@@ -163,8 +163,9 @@ export const route: Route = {
 };
 
 async function handler(ctx) {
+    const language: Language = 'zh-CN';
     const { id = '58af05dfb6b4300151760176d2aad0a04c275aaadbb1315039263f021f920dcd' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 15;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 15;
 
     const rootUrl = 'https://www.chinaisa.org.cn';
 
@@ -188,20 +189,20 @@ async function handler(ctx) {
     let items = $('ul.list li a')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
             return {
-                title: item.prop('title') ?? item.text(),
-                link: new URL(`gxportal/xfgl/portal/${item.prop('href')}`, rootUrl).href,
-                guid: item.prop('href').match(/articleId=(\w+)/)[1],
-                pubDate: parseDate(item.parent().find('span.times').text().replaceAll('[]', '')),
+                title: $item.prop('title') ?? $item.text(),
+                link: new URL(`gxportal/xfgl/portal/${$item.prop('href')}`, rootUrl).href,
+                guid: $item.prop('href')!.match(/articleId=(\w+)/)![1],
+                pubDate: parseDate($item.parent().find('span.times').text().replaceAll('[]', '')),
             };
         });
 
     items = await Promise.all(
         items.map((item) =>
-            cache.tryGet(item.link, async () => {
+            cache.tryGet(item.link!, async () => {
                 const detailResponse = await ofetch(apiArticleUrl, {
                     method: 'POST',
                     headers: {
@@ -221,7 +222,7 @@ async function handler(ctx) {
 
                 item.title = content('div.article_title').contents().first().text() || item.title;
                 item.description = content('div.article_main').html();
-                item.author = matches[1].split(/&/)[0];
+                item.author = matches[1].split(/&/, 1)[0];
                 item.guid = `chinaisa-${item.guid}`;
                 item.pubDate = parseDate(matches[2]);
 
@@ -236,14 +237,14 @@ async function handler(ctx) {
 
     $ = load(currentResponse);
 
-    const icon = new URL($('link[rel="shortcut icon"]').prop('href'), rootUrl).href;
+    const icon = new URL($('link[rel="shortcut icon"]').prop('href')!, rootUrl).href;
 
     return {
         item: items,
         title: `${$('title').text()} - ${subtitle}`,
         link: currentUrl,
         description: $('meta[name="description"]').prop('content'),
-        language: 'cn',
+        language,
         image: new URL('img/logo.jpg', rootUrl).href,
         icon,
         logo: icon,

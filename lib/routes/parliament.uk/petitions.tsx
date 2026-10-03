@@ -3,14 +3,14 @@ import { load } from 'cheerio';
 import type { Context } from 'hono';
 import { renderToString } from 'hono/jsx/dom/server';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { state = 'all' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '50', 10);
+    const limit = Number(ctx.req.query('limit') ?? '50');
 
     const rootUrl = 'https://petition.parliament.uk';
     const targetUrl: string = new URL(`petitions?state=${state}`, rootUrl).href;
@@ -18,7 +18,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
-    const language: string = $('html').prop('lang') ?? 'en';
+    const language = ($('html').prop('lang') ?? 'en') as Language;
 
     const jsonResponse = await ofetch(jsonUrl, {
         query: {

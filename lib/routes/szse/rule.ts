@@ -1,13 +1,13 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
 export const handler = async (ctx) => {
     const { channel = 'allrules/bussiness' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 30;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 30;
 
     const rootUrl = 'https://www.szse.cn';
     const apiUrl = new URL('api/search/content', rootUrl).href;
@@ -51,7 +51,7 @@ export const handler = async (ctx) => {
 
                 item.title = title;
                 item.description = description;
-                item.pubDate = item.pubDate ?? parseDate($$('div.time span').text());
+                item.pubDate ??= parseDate($$('div.time span').text());
                 item.author = $$('meta[name="author"]').prop('content');
                 item.content = {
                     html: description,
@@ -65,6 +65,7 @@ export const handler = async (ctx) => {
     );
 
     const image = $('a.navbar-brand img').prop('src');
+    const language = $('html').prop('lang') as Language;
 
     return {
         title: `深圳证券交易所 - ${channelEl.text()}`,
@@ -74,7 +75,7 @@ export const handler = async (ctx) => {
         allowEmpty: true,
         image,
         author: $('meta[name="author"]').prop('content'),
-        language: $('html').prop('lang'),
+        language,
     };
 };
 

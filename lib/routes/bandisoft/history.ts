@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
@@ -128,7 +128,7 @@ const languageOptions = [
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { id = 'bandizip', language = 'en' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '500', 10);
+    const limit = Number(ctx.req.query('limit') ?? '500');
 
     const validIds = new Set<string>(idOptions.map((option) => option.value));
 
@@ -147,20 +147,20 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
-    const lang = $('html').attr('lang') ?? 'en';
+    const lang = ($('html').attr('lang') ?? 'en') as Language;
     const author: string | undefined = $('meta[name="author"]').attr('content');
 
     const items: DataItem[] = $('div.row')
         .slice(0, limit)
         .toArray()
-        .map((el): Element => {
+        .map((el) => {
             const $el: Cheerio<Element> = $(el);
 
             const version: string | undefined = $el.find('div.cell1').text();
             const pubDateStr: string | undefined = $el.find('div.cell2').text();
 
             const title: string = version;
-            const description: string | undefined = $el.find('ul.cell3').html() ?? undefined;
+            const description = $el.find('ul.cell3').html();
 
             const linkUrl: string = targetUrl;
             const guid = `bandisoft-${id}-${language}-${version}`;

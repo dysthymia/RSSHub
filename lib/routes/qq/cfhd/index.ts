@@ -1,7 +1,7 @@
 import { load } from 'cheerio';
 import iconv from 'iconv-lite';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -9,7 +9,7 @@ import timezone from '@/utils/timezone';
 
 export const handler = async (ctx) => {
     const { category = '60847' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 12;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 12;
 
     const rootUrl = 'https://cfhd.cf.qq.com';
     const rootImageUrl = 'https://game.gtimg.cn';
@@ -21,18 +21,18 @@ export const handler = async (ctx) => {
 
     const $ = load(iconv.decode(response, 'gbk'));
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = $('div.news-list-item ul li.list-item')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem & { link: string } => {
+            const $item = $(item);
 
             return {
-                title: item.find('p').text(),
-                pubDate: parseDate(item.find('span.date').text()),
-                link: new URL(item.find('a.clearfix').prop('href'), rootUrl).href,
+                title: $item.find('p').text(),
+                pubDate: parseDate($item.find('span.date').text()),
+                link: new URL($item.find('a.clearfix').prop('href')!, rootUrl).href,
             };
         });
 
@@ -51,7 +51,7 @@ export const handler = async (ctx) => {
 
                 item.title = title;
                 item.description = description;
-                item.pubDate = timezone(parseDate($$('p.news-details-p1').text().trim()), +8);
+                item.pubDate = timezone(parseDate($$('p.news-details-p1').text().trim()), 8);
                 item.content = {
                     html: description,
                     text: $$('div.news-details-cont').text(),
@@ -68,7 +68,7 @@ export const handler = async (ctx) => {
     const image = new URL('images/cfhd/web202305/logo.png', rootImageUrl).href;
 
     return {
-        title: `${$('title').text().split(/-/)[0]} - ${$('li.cur').text()}`,
+        title: `${$('title').text().split(/-/, 1)[0]} - ${$('li.cur').text()}`,
         description: $('meta[name="Description"]').prop('content'),
         link: currentUrl,
         item: items,

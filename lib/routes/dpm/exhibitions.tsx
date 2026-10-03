@@ -40,7 +40,7 @@ export const route: Route = {
 
         const currentType = typeParam ? TYPE_MAP[typeParam] : undefined;
 
-        const searchParams: Record<string, string> = {
+        const searchParams = {
             [Math.random().toString()]: '',
             category_id: '169',
             old_year: '1',
@@ -66,7 +66,7 @@ export const route: Route = {
         });
 
         const museumName = namespace.zh?.name || namespace.name;
-        const titleTag = currentType ? `${currentType.name}` : '正在展览';
+        const titleTag = currentType ? currentType.name : '正在展览';
         const $ = load(response.data);
 
         const itemElements = $('.item').toArray();
@@ -76,7 +76,7 @@ export const route: Route = {
             const title = $item.find('a.aa').attr('title') || '';
 
             // Filter out 结束 or 暂闭 status exhibition
-            const status = $item.find('.label').text().trim();
+            const status = $item.find('.label').text();
             if (status.includes('结束') || status.includes('暂闭')) {
                 return null;
             }
@@ -105,7 +105,7 @@ export const route: Route = {
 
             const cacheKey = hasNoLink ? `dpm-exhibit-${title}-${duration}` : itemLink;
 
-            return cache.tryGet(cacheKey, async () => {
+            return cache.tryGet(cacheKey, async (): Promise<DataItem> => {
                 let fullDuration = duration;
 
                 // if the exhibition is marked as incomplete, try to fetch the detail page to get the full duration, but only if there is a valid link to follow
@@ -126,7 +126,7 @@ export const route: Route = {
                     fullDuration = '未定/常设';
                 }
 
-                const cleanDuration = fullDuration.replaceAll('.', '-').replaceAll('/', '-');
+                const cleanDuration = fullDuration.replaceAll(/[./]/g, '-');
 
                 // use YYYY-MM-DD for date format
                 const dateMatches = cleanDuration.match(/\d{4}-\d{2}-\d{2}/g);
@@ -185,7 +185,7 @@ export const route: Route = {
                         endDate, // format: YYYY-MM-DD or '未定/常设'
                         itemLink,
                     },
-                } as DataItem;
+                };
             });
         });
 

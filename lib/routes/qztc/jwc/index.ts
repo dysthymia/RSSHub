@@ -70,7 +70,7 @@ async function handler(ctx) {
                 } else if (!link.startsWith('http')) {
                     link = rootUrl.slice(0, -1) + link;
                 }
-                const pubDate = timezone(parseDate(cheerioItem.find('.news_meta').text()), +8);
+                const pubDate = timezone(parseDate(cheerioItem.find('.news_meta').text()), 8);
 
                 return {
                     title,
@@ -116,5 +116,5 @@ async function handler(ctx) {
         title: $('head > title').text() + ' - 泉州师范学院-教务处',
         link: rootUrl + type + '/list.htm',
         item: items,
-    } as Data;
+    } satisfies Data;
 }

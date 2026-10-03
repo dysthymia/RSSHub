@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Context } from 'hono';
 import MarkdownIt from 'markdown-it';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
@@ -45,7 +45,7 @@ const md = MarkdownIt({
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { type = 'new', origin = 'all', projectTag } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '15', 10);
+    const limit = Number(ctx.req.query('limit') ?? '15');
 
     const baseUrl = 'https://oshwhub.com';
     const apiUrl: string = new URL('api/project', baseUrl).href;
@@ -54,7 +54,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
     const targetResponse = await ofetch(targetUrl);
     const $: CheerioAPI = load(targetResponse);
-    const language = $('html').attr('lang') ?? 'zh';
+    const language = ($('html').attr('lang') ?? 'zh') as Language;
 
     const tagResponse = await ofetch(apiTagUrl);
     const projectTagsData = tagResponse.result;
@@ -86,7 +86,8 @@ export const handler = async (ctx: Context): Promise<Data> => {
         });
         const pubDate: number | string = item.created_at;
         const linkUrl: string | undefined = item.path;
-        const categories: string[] = [originOptions.find((opt) => opt.value === item.origin)?.label ?? undefined].filter(Boolean) as string[];
+        const originLabel: string | undefined = originOptions.find((opt) => opt.value === item.origin)?.label;
+        const categories: string[] = originLabel ? [originLabel] : [];
         const authors: DataItem['author'] = item.owner
             ? [
                   {
@@ -104,7 +105,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
             description,
             pubDate: pubDate ? parseDate(pubDate) : undefined,
             link: linkUrl ? new URL(item.link, baseUrl).href : undefined,
-            categories,
+            category: categories,
             author: authors,
             guid,
             id: guid,
@@ -116,7 +117,6 @@ export const handler = async (ctx: Context): Promise<Data> => {
             banner: image,
             updated: updated ? parseDate(updated) : undefined,
             language,
-            uuid: item.uuid,
         };
 
         return processedItem;
@@ -129,7 +129,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
             }
 
             return cache.tryGet(item.link, async (): Promise<DataItem> => {
-                const projectId = item.guid.replace(/^oshwhub-/, '');
+                const projectId = item.guid!.replace(/^oshwhub-/, '');
                 const detailUrl = new URL(`api/project/${projectId}`, baseUrl).href;
                 const detailResponse = await ofetch(detailUrl);
 
@@ -141,19 +141,19 @@ export const handler = async (ctx: Context): Promise<Data> => {
                 const origin: string | undefined = originOptions.find((opt) => opt.value === result.origin)?.label ?? undefined;
                 const tags: string[] = findNamesByUuids(projectTagsData, result.project_tags ?? []);
 
-                const categories: string[] = [...new Set([...(item.category ?? []), origin ?? undefined, ...tags, result.license].filter(Boolean) as string[])];
-                const authors: DataItem['author'] = [
-                    ...new Map(
-                        [result.owner, result.creator, ...result.members].map((author) => {
-                            const item = {
-                                name: author.nickname,
-                                url: new URL(author.username, baseUrl).href,
-                                avatar: author.avatar ? `https:${author.avatar}` : undefined,
-                            };
-                            return [`${item.name}|${item.url}`, item];
-                        })
-                    ).values(),
-                ];
+                const categories: string[] = [...new Set([...(item.category ?? []), origin ?? undefined, ...tags, result.license].filter((value): value is string => Boolean(value)))];
+                const authors: DataItem['author'] = new Map(
+                    [result.owner, result.creator, ...result.members].map((author) => {
+                        const item = {
+                            name: author.nickname,
+                            url: new URL(author.username, baseUrl).href,
+                            avatar: author.avatar ? `https:${author.avatar}` : undefined,
+                        };
+                        return [`${item.name}|${item.url}`, item];
+                    })
+                )
+                    .values()
+                    .toArray();
                 const guid: string = result.uuid ? `oshwhub-${result.uuid}` : item.guid || '';
                 const image: string | undefined = result.thumb?.startsWith('https:') ? result.thumb : `https:${result.thumb}`;
                 const upDatedStr: string | undefined = result.updated_at || pubDateStr;

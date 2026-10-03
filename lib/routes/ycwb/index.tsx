@@ -62,7 +62,7 @@ async function handler(ctx) {
                 ) : null}
             </>
         ),
-        pubDate: timezone(parseDate(item.PUBTIME), +8),
+        pubDate: timezone(parseDate(item.PUBTIME), 8),
         link: item.PUBURL,
         nodeName: item.NODENAME,
     }));
@@ -90,7 +90,7 @@ async function handler(ctx) {
                     }
                     // Filter author from comments
                     if (/author/.test(el.data)) {
-                        item.author = el.data.split('<author>')[1].split('</author>')[0];
+                        item.author = el.data.split('<author>', 2)[1].split('</author>', 1)[0];
                     }
                 });
 
@@ -100,7 +100,7 @@ async function handler(ctx) {
                 const children = content('.path').children('a');
                 for (const child of children) {
                     if (content(child).text() === nodeName && nodeLink === '') {
-                        nodeLink = content(child).attr('href');
+                        nodeLink = content(child).attr('href')!;
                     }
                 }
 
@@ -119,7 +119,7 @@ async function handler(ctx) {
 
     return {
         title: `羊城晚报金羊网 - ${nodeName}`,
-        link: String(nodeLink === '' ? 'https://www.ycwb.com/' : nodeLink),
+        link: nodeLink === '' ? 'https://www.ycwb.com/' : nodeLink,
         item: items,
     };
 }

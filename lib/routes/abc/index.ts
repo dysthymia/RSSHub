@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
@@ -9,7 +9,7 @@ import { renderDescription } from './templates/description';
 
 export const route: Route = {
     path: '/:category{.+}?',
-    example: '/wa',
+    example: '/abc/wa',
     radar: [
         {
             source: ['abc.net.au/:category*'],
@@ -34,7 +34,7 @@ The supported channels are all listed in the table below. For other channels, pl
 
 async function handler(ctx) {
     const { category = 'news/justin' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 30;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 30;
 
     const rootUrl = 'https://www.abc.net.au';
     const apiUrl = new URL('news-web/api/loader/channelrefetch', rootUrl).href;
@@ -42,21 +42,21 @@ async function handler(ctx) {
     let currentUrl: string;
     let documentId;
 
-    if (Number.isNaN(category)) {
-        currentUrl = new URL(category, rootUrl).href;
+    if (Number.isNaN(Number(category))) {
+        currentUrl = `${rootUrl}/${category}`;
     } else {
         documentId = category;
         const feedUrl = new URL(`news/feed/${documentId}/rss.xml`, rootUrl).href;
 
         const feedResponse = await ofetch(feedUrl);
-        currentUrl = feedResponse.match(/<link>([\w-./:?]+)<\/link>/)[1];
+        currentUrl = feedResponse.match(/<link>([\w./:?-]+)<\/link>/)[1];
     }
 
     const currentResponse = await ofetch(currentUrl);
 
     const $ = load(currentResponse);
 
-    documentId = documentId ?? $('div[data-uri^="coremedia://collection/"]').first().prop('data-uri').split(/\//).pop();
+    documentId ??= $('div[data-uri^="coremedia://collection/"]').first().prop('data-uri').split(/\//).pop();
 
     const response = await ofetch(apiUrl, {
         query: {
@@ -67,13 +67,13 @@ async function handler(ctx) {
     });
 
     let items = response.collection.slice(0, limit).map((i) => {
-        const item = {
+        const item: DataItem = {
             title: i.title.children ?? i.title,
             link: i.link.startsWith('https://') ? i.link : new URL(i.link, rootUrl).href,
             description: renderDescription({
                 image: i.image
                     ? {
-                          src: i.image.imgSrc.split(/\?/)[0],
+                          src: i.image.imgSrc.split(/\?/, 1)[0],
                           alt: i.image.alt,
                       }
                     : undefined,
@@ -86,7 +86,7 @@ async function handler(ctx) {
 
         if (i.mediaIndicator) {
             item.enclosure_type = 'audio/mpeg';
-            item.itunes_item_image = i.image?.imgSrc.split(/\?/)[0] ?? undefined;
+            item.itunes_item_image = i.image?.imgSrc.split(/\?/, 1)[0] ?? undefined;
             item.itunes_duration = i.mediaIndicator.duration;
         }
 
@@ -107,11 +107,11 @@ async function handler(ctx) {
                         .children()
                         .each((_, el) => {
                             const element = content(el);
-                            if (element.prop('tagName').toLowerCase() === 'figure') {
+                            if (element.prop('tagName')!.toLowerCase() === 'figure') {
                                 element.replaceWith(
                                     renderDescription({
                                         image: {
-                                            src: element.find('img').prop('src').split(/\?/)[0],
+                                            src: element.find('img').prop('src')!.split(/\?/, 1)[0],
                                             alt: element.find('figcaption').text().trim(),
                                         },
                                     })
@@ -124,14 +124,14 @@ async function handler(ctx) {
                     item.title = content('meta[property="og:title"]').prop('content');
                     item.description = '';
 
-                    const enclosurePattern = String.raw`"(?:MIME|content)?Type":"([\w]+/[\w]+)".*?"(?:fileS|s)?ize":(\d+),.*?"url":"([\w-.:/?]+)"`;
+                    const enclosurePattern = String.raw`"(?:MIME|content)?Type":"(\w+/\w+)".*?"(?:fileS|s)?ize":(\d+),.*?"url":"([\w.:/?-]+)"`;
 
                     const enclosureMatches = detailResponse.match(new RegExp(enclosurePattern, 'g'));
 
                     if (enclosureMatches) {
                         const enclosureMatch = enclosureMatches
                             .map((e) => e.match(new RegExp(enclosurePattern)))
-                            .toSorted((a, b) => Number.parseInt(a[2], 10) - Number.parseInt(b[2], 10))
+                            .toSorted((a, b) => Number(a[2]) - Number(b[2]))
                             .pop();
 
                         item.enclosure_url = enclosureMatch[3];
@@ -178,8 +178,8 @@ async function handler(ctx) {
         title: $('title').first().text(),
         link: currentUrl,
         description: $('meta[property="og:description"]').prop('content'),
-        language: $('html').prop('lang'),
-        image: $('meta[property="og:image"]').prop('content').split('?')[0],
+        language: $('html').prop('lang') as Language,
+        image: $('meta[property="og:image"]').prop('content').split('?', 1)[0],
         icon,
         logo: icon,
         subtitle: $('meta[property="og:title"]').prop('content'),

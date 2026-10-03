@@ -65,13 +65,11 @@ async function handler(ctx) {
     const limit = 20;
 
     let url = `https://www.lovelive-anime.jp/common/templates/api/article_list.php?limit=${limit}&data=`;
-    const params: { category: string[]; series?: string[]; subcategory?: string[] } = { category: ['NEWS'] };
-    if (series) {
-        params.series = [series];
-    }
-    if (subcategory) {
-        params.subcategory = [subcategory];
-    }
+    const params = {
+        category: ['NEWS'],
+        series: series ? [series] : undefined,
+        subcategory: subcategory ? [subcategory] : undefined,
+    };
     url += encodeURIComponent(JSON.stringify(params));
 
     const data = await ofetch(url);
@@ -82,7 +80,7 @@ async function handler(ctx) {
         description: renderDescription({
             imglink: 'https://www.lovelive-anime.jp' + item.thumbnail,
         }),
-        pubDate: timezone(parseDate(item.dspdate), +9),
+        pubDate: timezone(parseDate(item.dspdate), 9),
         category: item.categories.subcategory.map((category) => category.name),
     }));
 

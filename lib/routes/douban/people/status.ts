@@ -51,8 +51,6 @@ export const route: Route = {
   <img loading="lazy" src="/img/readable-douban.png" alt="豆瓣读书的可读豆瓣广播 RSS" />`,
 };
 
-const headers = { Referer: 'https://m.douban.com/' };
-
 function tryFixStatus(status) {
     let result = { isFixSuccess: true, why: '' };
     const now = new Date();
@@ -101,7 +99,7 @@ function tryFixStatus(status) {
     }
 
     if (status.sharing_url) {
-        status.sharing_url = status.sharing_url.split('&')[0];
+        status.sharing_url = status.sharing_url.split('&', 1)[0];
     }
 
     if (!result.isFixSuccess) {
@@ -113,7 +111,24 @@ function tryFixStatus(status) {
     return result;
 }
 
-function getContentByActivity(ctx, item, params = {}, picsPrefixes = []) {
+interface ContentParams {
+    readable?: boolean;
+    authorNameBold?: boolean;
+    showAuthorInTitle?: boolean;
+    showAuthorInDesc?: boolean;
+    showAuthorAvatarInDesc?: boolean;
+    showEmojiForRetweet?: boolean;
+    showRetweetTextInTitle?: boolean;
+    addLinkForPics?: boolean;
+    showTimestampInDescription?: boolean;
+    showComments?: boolean;
+    showColonInDesc?: boolean;
+    widthOfPics?: number;
+    heightOfPics?: number;
+    sizeOfAuthorAvatar?: number;
+}
+
+function getContentByActivity(ctx, item, params: ContentParams = {}, picsPrefixes: string[] = []) {
     const routeParams = querystring.parse(ctx.req.param('routeParams'));
 
     const mergedParams = {
@@ -135,8 +150,6 @@ function getContentByActivity(ctx, item, params = {}, picsPrefixes = []) {
         sizeOfAuthorAvatar: fallback(params.sizeOfAuthorAvatar, queryToInteger(routeParams.sizeOfAuthorAvatar), 48),
     };
 
-    params = mergedParams;
-
     const {
         readable,
         authorNameBold,
@@ -154,7 +167,7 @@ function getContentByActivity(ctx, item, params = {}, picsPrefixes = []) {
         widthOfPics,
         heightOfPics,
         sizeOfAuthorAvatar,
-    } = params;
+    } = mergedParams;
 
     function prepareImages(imageUrls: Array<string | undefined>) {
         if (!imageUrls.length) {
@@ -276,7 +289,7 @@ function getContentByActivity(ctx, item, params = {}, picsPrefixes = []) {
 
     let text = status.text;
     let lastIndex = 0;
-    const replacedTextSegements = [];
+    const replacedTextSegements: any[] = [];
     for (const entity of status.entities) {
         replacedTextSegements.push(
             text.slice(lastIndex, entity.start),
@@ -313,10 +326,7 @@ function getContentByActivity(ctx, item, params = {}, picsPrefixes = []) {
         }
         picsPrefixes.push(picsPrefix);
 
-        const imageUrls: Array<string | undefined> = [];
-        for (const image of status.images) {
-            imageUrls.push(image?.large?.url);
-        }
+        const imageUrls: Array<string | undefined> = Array.from(status.images, (image: any) => image?.large?.url);
         description += prepareImages(imageUrls);
     }
 
@@ -412,10 +422,7 @@ function getContentByActivity(ctx, item, params = {}, picsPrefixes = []) {
             description += '<br clear="both" /><div style="clear: both"></div></blockquote>';
         }
         if (status.card.images_block) {
-            const imageUrls: Array<string | undefined> = [];
-            for (const image of status.card.images_block.images) {
-                imageUrls.push(image.image?.large?.url);
-            }
+            const imageUrls: Array<string | undefined> = Array.from(status.card.images_block.images, (image: any) => image.image?.large?.url);
             description += prepareImages(imageUrls);
         }
     }
@@ -497,7 +504,7 @@ async function getFullTextItems(items) {
             } else {
                 const {
                     data: { text },
-                } = await got({ url, headers });
+                } = await got(url);
                 cache.set(url, text);
                 item.status.text = text;
             }
@@ -514,7 +521,7 @@ async function getFullTextItems(items) {
                     // 存在reshared_status字段正常，但尝试获取时返回403的情况。比如原po被炸号就可能这样。
                     const {
                         data: { text },
-                    } = await got({ url, headers });
+                    } = await got(url);
                     cache.set(url, text);
                     item.status.reshared_status.text = text;
                 } catch {
@@ -531,7 +538,7 @@ async function handler(ctx) {
     const items = await cache.tryGet(
         url,
         async () => {
-            const _r = await got({ url, headers });
+            const _r = await got(url);
             return _r.data.items;
         },
         config.cache.routeExpire,

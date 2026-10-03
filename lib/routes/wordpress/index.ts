@@ -2,7 +2,7 @@ import { load } from 'cheerio';
 
 import { config } from '@/config';
 import ConfigNotFoundError from '@/errors/types/config-not-found';
-import type { Route } from '@/types';
+import type { Data, Route } from '@/types';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 import parser from '@/utils/rss-parser';
@@ -11,13 +11,13 @@ import { apiSlug, bakeFilterSearchParams, bakeFiltersWithPair, bakeUrl, fetchDat
 
 async function handler(ctx) {
     const { url = 'https://wordpress.org/news', filter } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 50;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 50;
 
     if (!config.feature.allow_user_supply_unsafe_domain) {
         throw new ConfigNotFoundError(`This RSS is disabled unless 'ALLOW_USER_SUPPLY_UNSAFE_DOMAIN' is set to 'true'.`);
     }
 
-    if (!/^(https?):\/\/[^\s#$./?].\S*$/i.test(url)) {
+    if (!/^https?:\/\/[^\s#$./?].\S*$/i.test(url)) {
         throw new Error('Invalid URL');
     }
 
@@ -39,21 +39,21 @@ async function handler(ctx) {
     try {
         const { data: response } = await got(apiUrl);
 
-        const items = (Array.isArray(response) ? response : JSON.parse(response.match(/(\[.*])$/)[1])).slice(0, limit).map((item) => {
+        const items = (Array.isArray(response) ? response : JSON.parse(response.match(/(\[.*\])$/)[1])).slice(0, limit).map((item) => {
             const terminologies = item._embedded['wp:term'];
             const guid = item.guid?.rendered ?? item.guid;
 
             const $$ = load(item.content?.rendered ?? item.content);
 
             $$('img').each((_, el) => {
-                el = $$(el);
+                const $el = $$(el);
 
-                const src = el.prop('src');
+                const src = $el.prop('src');
 
-                if (src.startsWith('/')) {
-                    el.prop('src', `${cdn}${item.link}${src}`);
-                } else if (src.startsWith('http:')) {
-                    el.prop('src', `${cdn}${src}`);
+                if (src!.startsWith('/')) {
+                    $el.prop('src', `${cdn}${item.link}${src}`);
+                } else if (src!.startsWith('http:')) {
+                    $el.prop('src', `${cdn}${src}`);
                 }
             });
 
@@ -81,7 +81,7 @@ async function handler(ctx) {
         return {
             ...data,
             item: items,
-        };
+        } as Data;
     } catch {
         const feed = await parser.parseURL(`${rootUrl}/feed/`);
 
@@ -91,21 +91,21 @@ async function handler(ctx) {
             const $$ = load(item['content:encoded']);
 
             $$('img').each((_, el) => {
-                el = $$(el);
+                const $el = $$(el);
 
-                const src = el.prop('src');
+                const src = $el.prop('src');
 
-                if (src.startsWith('/')) {
-                    el.prop('src', `${cdn}${item.link}${src}`);
-                } else if (src.startsWith('http:')) {
-                    el.prop('src', `${cdn}${src}`);
+                if (src!.startsWith('/')) {
+                    $el.prop('src', `${cdn}${item.link}${src}`);
+                } else if (src!.startsWith('http:')) {
+                    $el.prop('src', `${cdn}${src}`);
                 }
             });
 
             const description = $$.html();
 
             return {
-                title: item.title,
+                title: item.title!,
                 description,
                 pubDate: parseDate(item.pubDate ?? ''),
                 link: item.link,
@@ -121,14 +121,14 @@ async function handler(ctx) {
         });
 
         return {
-            title: feed.title,
+            title: feed.title!,
             description: feed.description,
             link: feed.link,
             item: items,
             allowEmpty: true,
             image: feed.image?.url,
             language: feed.language,
-        };
+        } satisfies Data;
     }
 }
 

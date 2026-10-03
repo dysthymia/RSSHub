@@ -43,16 +43,16 @@ async function handler(ctx) {
 
     const items = data.map((item) => {
         const enclosure_url = `${hostUrl}/${item.target_path}${item.target_filename}`;
-        const enclosure_type = `${item.type}/${enclosure_url.match(/\.(\w+)$/)[1]}`;
+        const enclosure_type = `${item.type}/${enclosure_url.match(/\.(\w+)$/)![1]}`;
 
         return {
             title: item.title,
             link: item.content_url,
             author: item.column_name,
-            pubDate: timezone(parseDate(item.publish_time), +8),
+            pubDate: timezone(parseDate(item.publish_time), 8),
             description: renderToString(
                 item.type === 'audio' ? (
-                    <audio controls="controls">
+                    <audio controls>
                         <source src={enclosure_url} type="audio/mp3" />
                     </audio>
                 ) : item.type === 'video' ? (
@@ -73,7 +73,7 @@ async function handler(ctx) {
 
     return {
         title: `内蒙古广播电视台 - ${author}`,
-        link: items[0].link.split(/\/\d{4}-\d{2}-\d{2}\//)[0],
+        link: items[0].link.split(/\/\d{4}-\d{2}-\d{2}\//, 1)[0],
         item: items,
         image: `${imageUrl.host}${imageUrl.filepath}${imageUrl.filename}`,
         itunes_author: author,

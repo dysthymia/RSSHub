@@ -1,16 +1,16 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
 export const handler = async (ctx) => {
     const { category = 'xwdt' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 16;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 16;
 
     const rootUrl = 'https://gs.hust.edu.cn';
-    const currentUrl = new URL(`${category}.htm`, rootUrl).href;
+    const currentUrl = `${rootUrl}/${category}.htm`;
 
     const { data: response } = await got(currentUrl);
 
@@ -19,22 +19,22 @@ export const handler = async (ctx) => {
     let items = $('div.btlist ul li')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
-            const a = item.find('a');
+            const a = $item.find('a');
             const link = a.prop('href');
 
             return {
                 title: a.text(),
-                pubDate: parseDate(item.find('span.time').text()),
-                link: link.startsWith('http') ? link : new URL(link, rootUrl).href,
+                pubDate: parseDate($item.find('span.time').text()),
+                link: link!.startsWith('http') ? link : new URL(link!, rootUrl).href,
             };
         });
 
     items = await Promise.all(
         items.map((item) =>
-            cache.tryGet(item.link, async () => {
+            cache.tryGet(item.link!, async () => {
                 try {
                     const { data: detailResponse } = await got(item.link);
 
@@ -58,7 +58,7 @@ export const handler = async (ctx) => {
     );
 
     const title = $('meta[name="keywords"]').prop('content')?.replaceAll(',', ' - ') ?? $('title').text();
-    const image = new URL($('div.logo img').prop('src'), rootUrl).href;
+    const image = new URL($('div.logo img').prop('src')!, rootUrl).href;
 
     return {
         title,

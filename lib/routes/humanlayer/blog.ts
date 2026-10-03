@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { DataItem, Route } from '@/types';
+import type { Data, DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
@@ -30,7 +30,7 @@ export const route: Route = {
     url: 'www.humanlayer.dev/blog',
 };
 
-async function handler() {
+async function handler(): Promise<Data> {
     const baseUrl = 'https://www.humanlayer.dev';
     const listUrl = `${baseUrl}/blog`;
 
@@ -39,12 +39,12 @@ async function handler() {
 
     const list = $('a.block.py-2.group[href^="/blog/"]')
         .toArray()
-        .map((el) => {
+        .map((el): DataItem & { link: string } => {
             const $el = $(el);
             const href = $el.attr('href')!;
-            const title = $el.find('h2').text().trim();
-            const metaLine = $el.find('p.text-sm').text().trim();
-            const description = $el.find('p[style]').text().trim();
+            const title = $el.find('h2').text();
+            const metaLine = $el.find('p.text-sm').text();
+            const description = $el.find('p[style]').text();
 
             // meta format: "Author · Date · Read time · #tag1 #tag2"
             const parts = metaLine.split('·').map((s) => s.trim());
@@ -59,13 +59,13 @@ async function handler() {
                 description,
                 pubDate: dateStr ? parseDate(dateStr) : undefined,
                 category,
-            } as DataItem;
+            };
         });
 
-    const items = (await Promise.all(
+    const items = await Promise.all(
         list.map((item) =>
-            cache.tryGet(item.link!, async () => {
-                const resp = await ofetch(item.link!);
+            cache.tryGet(item.link, async (): Promise<DataItem> => {
+                const resp = await ofetch(item.link);
                 const $detail = load(resp);
 
                 const ogTitle = $detail('meta[property="og:title"]').attr('content');
@@ -83,10 +83,10 @@ async function handler() {
                     pubDate: publishedTime ? parseDate(publishedTime) : item.pubDate,
                     author: ogAuthor || item.author,
                     banner: ogImage,
-                } as DataItem;
+                };
             })
         )
-    )) as DataItem[];
+    );
 
     return {
         title: 'HumanLayer Blog',

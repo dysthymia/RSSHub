@@ -1,4 +1,4 @@
-import type { Route } from '@/types';
+import type { Language, Route } from '@/types';
 import { parseDate } from '@/utils/parse-date';
 import parser from '@/utils/rss-parser';
 
@@ -10,17 +10,17 @@ const pdfUrlGenerators = {
 
 export const handler = async (ctx) => {
     const { keyword = 'query/Detection' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 150;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 150;
 
     const rootUrl = 'https://papers.cool';
     const currentUrl = new URL(`arxiv/search?highlight=1&query=${keyword}&sort=0`, rootUrl).href;
     const feedUrl = new URL(`arxiv/search/feed?query=${keyword}`, rootUrl).href;
 
-    const site = keyword.split(/\//)[0];
+    const site = keyword.split(/\//, 1)[0];
     const apiKimiUrl = new URL(`${site}/kimi?paper=`, rootUrl).href;
     const feed = await parser.parseURL(feedUrl);
 
-    const language = 'en';
+    const language: Language = 'en';
 
     const items = feed.items.slice(0, limit).map((item) => {
         const title = item.title;
@@ -38,7 +38,7 @@ export const handler = async (ctx) => {
         });
 
         return {
-            title,
+            title: title!,
             description,
             pubDate: parseDate(item.pubDate ?? ''),
             link: item.link,
@@ -59,7 +59,7 @@ export const handler = async (ctx) => {
     });
 
     return {
-        title: feed.title,
+        title: feed.title!,
         description: feed.description,
         link: currentUrl,
         item: items,

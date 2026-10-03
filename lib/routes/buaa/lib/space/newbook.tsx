@@ -116,8 +116,8 @@ export const route: Route = {
 
 async function handler(ctx: Context): Promise<Data> {
     const path = ctx.req.param('path');
-    const i = path.indexOf('/');
-    const params = i === -1 ? '' : path.slice(i + 1);
+    const i = path!.indexOf('/');
+    const params = i === -1 ? '' : path!.slice(i + 1);
     const searchParams = new URLSearchParams(params);
     const dcpCode = searchParams.get('dcpCode'); // Filter by subject (discipline code)
     const clsNo = searchParams.get('clsNo'); // Filter by class (Chinese Library Classification)
@@ -129,7 +129,7 @@ async function handler(ctx: Context): Promise<Data> {
     !dcpCode && !clsNo && searchParams.set('dcpCode', 'nolimit'); // No classification filter
     const url = `https://space.lib.buaa.edu.cn/meta-local/opac/new/100/${clsNo ? 'byclass' : 'bysubject'}?${searchParams.toString()}`;
     const { data } = await got(url);
-    const list = (data?.data?.dataList || []) as Book[];
+    const list: Book[] = data?.data?.dataList || [];
     const item = await Promise.all(list.map(async (item: Book) => await getItem(item)));
     const res: Data = {
         title: '北航图书馆 - 新书速递',
@@ -145,9 +145,9 @@ async function handler(ctx: Context): Promise<Data> {
 }
 
 async function getItem(item: Book): Promise<DataItem> {
-    return (await cache.tryGet(item.isbn, async () => {
+    return await cache.tryGet(item.isbn, async (): Promise<DataItem> => {
         const info = await getItemInfo(item.isbn);
-        const holdings = JSON.parse(item.holdings) as Holding[];
+        const holdings: Holding[] = JSON.parse(item.holdings);
         const link = `https://space.lib.buaa.edu.cn/space/searchDetailLocal/${item.bibId}`;
         const content = renderToString(
             <>
@@ -234,11 +234,11 @@ async function getItem(item: Book): Promise<DataItem> {
         return {
             language: item.language === 'eng' ? 'en' : 'zh-CN',
             title: item.title,
-            pubDate: item.onSelfDate ? timezone(parseDate(item.onSelfDate), +8) : undefined,
+            pubDate: item.onSelfDate ? timezone(parseDate(item.onSelfDate), 8) : undefined,
             description: content,
             link,
         };
-    })) as DataItem;
+    });
 }
 
 async function getItemInfo(isbn: string): Promise<Info | null> {

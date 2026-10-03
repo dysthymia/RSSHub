@@ -44,7 +44,7 @@ export const handler = async () => {
             }
 
             const title = $el.find('span').text().trim();
-            const pubDateStr = $el.find('label').text().trim();
+            const pubDateStr = $el.find('label').text();
 
             return {
                 title,
@@ -53,7 +53,7 @@ export const handler = async () => {
                 description: title,
             };
         })
-        .filter(Boolean);
+        .filter((item) => item !== null);
 
     return {
         title: `${author} - ${pageTitle}`,

@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
@@ -8,7 +8,7 @@ import timezone from '@/utils/timezone';
 
 export const handler = async (ctx) => {
     const { type = 'news', id } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 20;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 20;
 
     const rootUrl = 'http://cpcaauto.com';
     const currentUrl = new URL(`news.php${type ? `?types=${type}${id ? `&anid=${id}` : ''}` : ''}`, rootUrl).href;
@@ -17,18 +17,18 @@ export const handler = async (ctx) => {
 
     const $ = load(response);
 
-    const language = 'zh';
+    const language = 'zh' as const satisfies Language;
 
     let items = $('div.list_d ul li.q')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem & { link: string } => {
+            const $item = $(item);
 
             return {
-                title: item.find('a').text(),
-                pubDate: parseDate(item.find('span').text().trim()),
-                link: new URL(item.find('a').prop('href'), rootUrl).href,
+                title: $item.find('a').text(),
+                pubDate: parseDate($item.find('span').text().trim()),
+                link: new URL($item.find('a').prop('href')!, rootUrl).href,
             };
         });
 
@@ -44,7 +44,7 @@ export const handler = async (ctx) => {
 
                 item.title = title;
                 item.description = description;
-                item.pubDate = timezone(parseDate($$('div.view span').first().text().split(/：/).pop()), +8);
+                item.pubDate = timezone(parseDate($$('div.view span').first().text().split(/：/).pop()!), 8);
                 item.content = {
                     html: description,
                     text: $$('div.text').text(),
@@ -133,9 +133,9 @@ export const route: Route = {
         {
             source: ['cpcaauto.com/news.php'],
             target: (_, url) => {
-                url = new URL(url);
-                const types = url.searchParams.get('types');
-                const id = url.searchParams.get('id');
+                const { searchParams } = new URL(url);
+                const types = searchParams.get('types');
+                const id = searchParams.get('id');
 
                 return types ? `/${types}${id ? `/${id}` : ''}` : '';
             },

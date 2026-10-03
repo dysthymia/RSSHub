@@ -1,15 +1,21 @@
 import { load } from 'cheerio';
 
-import type { Route } from '@/types';
+import InvalidParameterError from '@/errors/types/invalid-parameter';
+import type { DataItem, Language, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
+import { isValidHost } from '@/utils/valid-host';
 
 import { renderDescription } from './templates/description';
 
 export const handler = async (ctx) => {
     const { category = '' } = ctx.req.param();
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit'), 10) : 12;
+    if (category && !isValidHost(category)) {
+        throw new InvalidParameterError('Invalid category');
+    }
+
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')) : 12;
 
     const rootUrl = 'https://lrepacks.net';
     const currentUrl = new URL(category, rootUrl).href;
@@ -18,24 +24,24 @@ export const handler = async (ctx) => {
 
     const $ = load(response);
 
-    const language = $('html').prop('lang');
+    const language = $('html').prop('lang') as Language;
 
     let items = $('#main article')
         .slice(0, limit)
         .toArray()
-        .map((item) => {
-            item = $(item);
+        .map((item): DataItem => {
+            const $item = $(item);
 
-            const title = item.find('h3.entry-title').text();
+            const title = $item.find('h3.entry-title').text();
             const description = renderDescription({
-                intro: item.find('div.entry-content').text(),
+                intro: $item.find('div.entry-content').text(),
             });
 
             return {
                 title,
                 description,
-                link: item.find('h3.entry-title a').prop('href'),
-                category: item
+                link: $item.find('h3.entry-title a').prop('href'),
+                category: $item
                     .find('span.cat-links')
                     .toArray()
                     .map((c) => $(c).text()),
@@ -45,7 +51,7 @@ export const handler = async (ctx) => {
 
     items = await Promise.all(
         items.map((item) =>
-            cache.tryGet(item.link, async () => {
+            cache.tryGet(item.link!, async () => {
                 const { data: detailResponse } = await got(item.link);
 
                 const $$ = load(detailResponse);
@@ -53,14 +59,14 @@ export const handler = async (ctx) => {
                 const data = JSON.parse($$('script[type="application/ld+json"]').first().text())['@graph']?.[0] ?? undefined;
 
                 $$('div.entry-content a.highslide[href]').each((_, el) => {
-                    el = $$(el);
+                    const $el = $$(el);
 
-                    el.parent().replaceWith(
+                    $el.parent().replaceWith(
                         renderDescription({
                             images: [
                                 {
-                                    src: el.prop('href'),
-                                    alt: el.prop('title'),
+                                    src: $el.prop('href'),
+                                    alt: $el.prop('title'),
                                 },
                             ],
                         })
@@ -93,7 +99,7 @@ export const handler = async (ctx) => {
         )
     );
 
-    const image = new URL($('div.logo img').prop('src'), rootUrl).href;
+    const image = new URL($('div.logo img').prop('src')!, rootUrl).href;
 
     return {
         title: $('title').text(),

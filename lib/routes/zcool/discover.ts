@@ -8,6 +8,17 @@ import { parseDate } from '@/utils/parse-date';
 import locations from './locations';
 import { renderDescription } from './templates/description';
 
+interface DiscoverQueries {
+    cate: string;
+    subCate: string;
+    city: string;
+    college: string;
+    recommendLevel: string;
+    sort: string;
+    limit: string;
+    [key: string]: string;
+}
+
 export const route: Route = {
     path: '/discover/:query?/:subCate?/:hasVideo?/:city?/:college?/:recommendLevel?/:sort?',
     categories: ['design'],
@@ -186,7 +197,7 @@ async function handler(ctx) {
         44: { 417: '文案/策划', 798: 'VR设计', 683: '独立游戏', 45: '其他', 824: '文章' },
     };
 
-    const queries = {
+    const queries: DiscoverQueries = {
         cate: '0',
         subCate: ctx.req.param('subCate') ?? '0',
         city: ctx.req.param('city') ?? '0',
@@ -230,7 +241,7 @@ async function handler(ctx) {
 
     for (const q in queries) {
         if (q === 'city') {
-            queries[q] = queries[q] in locations ? locations[queries.city].toString() : (queries[q] = '0');
+            queries[q] = Object.hasOwn(locations, queries[q]) ? locations[queries.city].toString() : (queries[q] = '0');
         }
         query += `${q}=${queries[q]}&`;
     }

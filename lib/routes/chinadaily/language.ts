@@ -3,7 +3,7 @@ import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 
-import type { Data, DataItem, Route } from '@/types';
+import type { Data, DataItem, Language, Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
@@ -14,19 +14,19 @@ import { renderDescription } from './templates/description';
 
 export const handler = async (ctx: Context): Promise<Data> => {
     const { category = 'thelatest' } = ctx.req.param();
-    const limit: number = Number.parseInt(ctx.req.query('limit') ?? '30', 10);
+    const limit = Number(ctx.req.query('limit') ?? '30');
 
     const baseUrl = 'https://language.chinadaily.com.cn';
-    const targetUrl: string = new URL(category, baseUrl).href;
+    const targetUrl = `${baseUrl}/${category}`;
 
     const response = await ofetch(targetUrl);
     const $: CheerioAPI = load(response);
-    const language = $('html').attr('lang') ?? 'zh-CN';
+    const language = ($('html').attr('lang') ?? 'zh-CN') as Language;
 
     let items: DataItem[] = $('div.gy_box, ul.content_list li')
         .slice(0, limit)
         .toArray()
-        .map((el): Element => {
+        .map((el) => {
             const $el: Cheerio<Element> = $(el);
 
             const $aEl: Cheerio<Element> = $el.find('a:not(.gy_box_img):not(.a_img)').first();
@@ -70,10 +70,10 @@ export const handler = async (ctx: Context): Promise<Data> => {
                 }
 
                 return cache.tryGet(item.link, async (): Promise<DataItem> => {
-                    const detailResponse = await ofetch(item.link);
+                    const detailResponse = await ofetch(item.link!);
                     const $$: CheerioAPI = load(detailResponse);
 
-                    const title: string = $$('meta[ property="og:title"]').attr('content');
+                    const title: string = $$('meta[ property="og:title"]').attr('content')!;
                     const pubDateStr: string | undefined = $$('p.main_title3').text().split(/\s/).pop();
                     const categories: string[] | undefined = $$('meta[name="keywords"]').attr('content')?.split(/,/);
                     const authorEls: Element[] = $$('meta[name="source"], meta[name="author"], meta[name="editor"]').toArray();
@@ -96,16 +96,16 @@ export const handler = async (ctx: Context): Promise<Data> => {
 
                     let processedItem: DataItem = {
                         title,
-                        pubDate: pubDateStr ? timezone(parseDate(pubDateStr), +8) : item.pubDate,
+                        pubDate: pubDateStr ? timezone(parseDate(pubDateStr), 8) : item.pubDate,
                         category: categories,
                         author: authors,
                         image,
                         banner: image,
-                        updated: upDatedStr ? timezone(parseDate(upDatedStr), +8) : item.updated,
+                        updated: upDatedStr ? timezone(parseDate(upDatedStr), 8) : item.updated,
                         language,
                     };
 
-                    const $enclosureEl: Cheerio<Element> = $$('iframe#playerFrame, audio').first();
+                    const $enclosureEl: Cheerio<Element> = $$('iframe#playerFrame, audio');
                     const enclosureUrl: string | undefined = $enclosureEl.attr('src');
 
                     if (enclosureUrl) {
@@ -146,7 +146,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
     ).filter((_): _ is DataItem => true);
 
     const title: string = $('title').text();
-    const author: string = title.split(/-\s/).pop();
+    const author: string = title.split(/-\s/).pop()!;
 
     return {
         title,
@@ -167,7 +167,7 @@ export const route: Route = {
     path: '/language/:category{.+}?',
     name: '英语点津',
     url: 'language.chinadaily.com.cn',
-    maintainers: ['nczitzk'],
+    maintainers: ['sanmmm', 'nczitzk'],
     handler,
     example: '/chinadaily/language/thelatest',
     parameters: {
@@ -217,6 +217,10 @@ export const route: Route = {
                 {
                     label: '权威发布',
                     value: '5af95d44a3103f6866ee845c',
+                },
+                {
+                    label: '考试培训',
+                    value: 'englishexams',
                 },
             ],
         },

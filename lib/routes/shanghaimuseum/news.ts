@@ -1,5 +1,6 @@
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
+import timezone from '@/utils/timezone';
 
 export const route = {
     path: '/information/news/:type?',
@@ -12,14 +13,14 @@ export const route = {
     maintainers: ['magazian'],
     radar: [
         {
-            source: ['www.shanghaimuseum.net/mu/frontend/pg/infomation/news'],
+            source: ['www.shanghaimuseum.cn/mu/frontend/pg/infomation/news'],
             target: '/information/news',
         },
     ],
     handler: async (ctx) => {
         const type = ctx.req.param('type') || 'all';
 
-        const baseUrl = 'https://www.shanghaimuseum.net';
+        const baseUrl = 'https://www.shanghaimuseum.cn';
         const apiUrl = `${baseUrl}/mu/frontend/pg/infomation/search-info`;
 
         const payload = {
@@ -67,7 +68,7 @@ export const route = {
 
             return {
                 title: item.titleDecoded || item.title,
-                pubDate: parseDate(item.issueTime),
+                pubDate: timezone(parseDate(item.issueTime), 8),
                 category: item.infoType?.entryItemName || item.bulletinInfoType?.entryItemName,
                 link: itemLink,
             };

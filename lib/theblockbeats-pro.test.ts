@@ -13,6 +13,15 @@ const createCtx = (channel: string, limit?: string) =>
         },
     }) as unknown as Context;
 
+// 路由处理器也可返回响应对象；测试只接受包含条目的订阅数据。
+const getFeed = async (ctx: Context) => {
+    const feed = await route.handler(ctx);
+    if (!feed || feed instanceof Response || !Array.isArray(feed.item)) {
+        throw new Error('Expected route feed items');
+    }
+    return { ...feed, item: feed.item };
+};
+
 const createFeed = (item: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
@@ -60,7 +69,7 @@ describe('/theblockbeats/pro/:channel', () => {
             })
         );
 
-        const feed = await route.handler(createCtx('article'));
+        const feed = await getFeed(createCtx('article'));
         expect(feed.title).toBe('BlockBeats Pro RSS');
         expect(feed.link).toBe('https://www.theblockbeats.info/');
         expect(feed.feedLink).toBe('https://api-pro.theblockbeats.info/v1/rss/article');
@@ -105,7 +114,7 @@ describe('/theblockbeats/pro/:channel', () => {
             })
         );
 
-        const feed = await route.handler(createCtx('newsflash', '100'));
+        const feed = await getFeed(createCtx('newsflash', '100'));
         expect(feed.feedLink).toBe('https://api-pro.theblockbeats.info/v1/rss/newsflash');
         expect(feed.item[0]).toMatchObject({
             title: 'Newsflash title',

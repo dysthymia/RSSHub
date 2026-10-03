@@ -72,7 +72,10 @@ export const route: Route = {
 
 async function handler(ctx: Context): Promise<Data> {
     const order = normalizeOrder(ctx.req.param('order'));
-    const limit = Math.min(Math.max(Number.parseInt(ctx.req.query('limit') ?? `${defaultLimit}`, 10) || defaultLimit, 1), maxLimit);
+    // 将请求的条数限制为安全的整数范围，非法输入回到默认值。
+    const requestedLimit = Number(ctx.req.query('limit'));
+    const parsedLimit = Number.isFinite(requestedLimit) ? Math.trunc(requestedLimit) : defaultLimit;
+    const limit = Math.min(Math.max(parsedLimit || defaultLimit, 1), maxLimit);
     const currentUrl = buildPortalUrl(order);
     const candidates = await getCookieCandidates();
     const candidatePages = await Promise.all(candidates.map((candidate) => fetchPortalPage(currentUrl, candidate.cookie)));
@@ -96,7 +99,8 @@ async function handler(ctx: Context): Promise<Data> {
     throw getMissingAuthError();
 }
 
-function buildFeed($: CheerioAPI, currentUrl: string, order: string, limit: number) {
+// 显式标注订阅数据类型，避免语言代码被推断为任意字符串。
+function buildFeed($: CheerioAPI, currentUrl: string, order: string, limit: number): Data {
     const items = parsePortalItems($, limit);
 
     if (items.length === 0) {
@@ -128,7 +132,7 @@ async function getCookieCandidates() {
 
     const cachedCookie = normalizeCookie((await cache.get(loginCookieCacheKey)) ?? '');
 
-    if (cachedCookie && getCookieDiagnostics(cachedCookie).hasAuthCookie && !candidates.some((candidate) => candidate.cookie === cachedCookie)) {
+    if (cachedCookie && getCookieDiagnostics(cachedCookie).hasAuthCookie && candidates.every((candidate) => candidate.cookie !== cachedCookie)) {
         candidates.push({ cookie: cachedCookie });
     }
 
@@ -166,6 +170,10 @@ async function login() {
         headers: getHtmlHeaders(rootUrl),
         parseResponse: (text) => text,
     });
+    // 登录页响应缺失时直接报错，避免将空内容交给 HTML 解析器。
+    if (typeof loginPageResponse._data !== 'string') {
+        throw new TypeError('Panwiki login page returned no HTML.');
+    }
     const loginPageCookie = mergeCookies('', getSetCookieHeaders(loginPageResponse.headers));
     const $ = load(loginPageResponse._data);
     const $form = $('form[id^="loginform_"]').first();
@@ -204,6 +212,10 @@ async function login() {
     const diagnostics = getCookieDiagnostics(loginCookie);
 
     if (!diagnostics.hasAuthCookie) {
+        // 登录失败页可能没有响应正文，先确认内容再提取错误原因。
+        if (typeof submitResponse._data !== 'string') {
+            throw new TypeError('Panwiki login response returned no HTML.');
+        }
         const message = extractLoginError(load(submitResponse._data));
         throw new Error(`Panwiki login failed: ${message || 'auth cookie was not returned.'} ${diagnostics.message}`);
     }
@@ -285,7 +297,7 @@ function normalizeCookie(cookie?: string) {
     if (setCookieLines.length > 0) {
         return normalizeCookieValue(
             setCookieLines
-                .map((line) => line.replace(/^set-cookie\s*:\s*/i, '').split(';')[0])
+                .map((line) => line.replace(/^set-cookie\s*:\s*/i, '').split(';', 1)[0])
                 .filter((line) => line.includes('='))
                 .join('; ')
         );
@@ -333,7 +345,7 @@ function getCookieDiagnostics(cookie: string) {
             const [name, ...valueParts] = part.trim().split('=');
             return { name, value: valueParts.join('=') };
         })
-        .filter(({ name }) => Boolean(name));
+        .filter(({ name }) => name);
     const hasAuthCookie = cookies.some(({ name, value }) => name.endsWith('_auth') && !name.endsWith('_invite_auth') && value !== 'deleted');
 
     return {
@@ -365,10 +377,12 @@ function splitSetCookieHeader(header: string) {
         const next = header.slice(index + 1).trimStart();
         const nextName = next.match(/^([^=;,\s]+)=/)?.[1].toLowerCase();
 
-        if (nextName && !cookieAttributeNames.has(nextName)) {
-            headers.push(header.slice(start, index).trim());
-            start = index + 1;
+        if (!nextName || cookieAttributeNames.has(nextName)) {
+            continue;
         }
+
+        headers.push(header.slice(start, index).trim());
+        start = index + 1;
     }
 
     headers.push(header.slice(start).trim());
@@ -410,7 +424,7 @@ function mergeCookies(cookie: string, setCookies: string[]) {
         }
     }
 
-    return [...cookieMap.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
+    return Array.from(cookieMap, ([name, value]) => `${name}=${value}`).join('; ');
 }
 
 function extractLoginError($: CheerioAPI) {
@@ -435,44 +449,45 @@ function parsePortalItems($: CheerioAPI, limit: number) {
     const seen = new Set<string>();
     const items: DataItem[] = [];
 
-    $('a[href*="mod=viewthread"][href*="tid="]')
-        .toArray()
-        .some((el) => {
-            const $link = $(el);
-            const title = normalizeText($link.text());
-            const href = $link.attr('href');
+    // 逐项读取并在达到订阅数量上限时停止，避免用 some 执行副作用。
+    for (const el of $('a[href*="mod=viewthread"][href*="tid="]').toArray()) {
+        const $link = $(el);
+        const title = normalizeText($link.text());
+        const href = $link.attr('href');
 
-            if (!title || !href) {
-                return false;
-            }
+        if (!title || !href) {
+            continue;
+        }
 
-            const link = new URL(href, rootUrl).href;
-            if (seen.has(link)) {
-                return false;
-            }
-            seen.add(link);
+        const link = new URL(href, rootUrl).href;
+        if (seen.has(link)) {
+            continue;
+        }
+        seen.add(link);
 
-            const $container = findTopicContainer($, $link, title);
-            const text = normalizeText($container.text());
-            const dateText = text.match(dateRegex)?.[0];
-            const category = extractCategories($, $container);
-            const author = extractAuthor(text, title, category);
-            const image = normalizeImageUrl($container.find('img').first().attr('src'));
-            const description = renderDescription($container, { title, category, author, dateText });
+        const $container = findTopicContainer($, $link, title);
+        const text = normalizeText($container.text());
+        const dateText = text.match(dateRegex)?.[0];
+        const category = extractCategories($, $container);
+        const author = extractAuthor(text, title, category);
+        const image = normalizeImageUrl($container.find('img').first().attr('src'));
+        const description = renderDescription($container, { title, category, author, dateText });
 
-            items.push({
-                title,
-                link,
-                guid: link,
-                pubDate: dateText ? parseDate(dateText) : undefined,
-                author,
-                category,
-                image,
-                description,
-            });
-
-            return items.length >= limit;
+        items.push({
+            title,
+            link,
+            guid: link,
+            pubDate: dateText ? parseDate(dateText) : undefined,
+            author,
+            category,
+            image,
+            description,
         });
+
+        if (items.length >= limit) {
+            break;
+        }
+    }
 
     return items;
 }
@@ -480,7 +495,7 @@ function parsePortalItems($: CheerioAPI, limit: number) {
 function findTopicContainer($: CheerioAPI, $link: Cheerio<Element>, title: string) {
     let $candidate = $link.parent();
 
-    for (const ancestor of $link.parents().toArray().slice(0, 8)) {
+    for (const ancestor of $link.parents().slice(0, 8).toArray()) {
         const $ancestor = $(ancestor);
         const text = normalizeText($ancestor.text());
 
@@ -513,17 +528,13 @@ function extractAuthor(text: string, title: string, categories: string[]) {
         .filter(Boolean);
     const dateIndex = lines.findIndex((line) => dateRegex.test(line));
 
-    if (dateIndex > 0) {
-        const ignored = new Set([title, ...categories, '夸克', '百度', '阿里', '迅雷']);
-        const author = lines
-            .slice(0, dateIndex)
-            .toReversed()
-            .find((line) => !ignored.has(line) && !line.includes(title) && !dateRegex.test(line));
-
-        if (author) {
-            return author;
-        }
+    if (dateIndex <= 0) {
+        return;
     }
+
+    // 从日期之前的文本中倒序寻找作者，不复制或反转原数组。
+    const ignored = new Set([title, ...categories, '夸克', '百度', '阿里', '迅雷']);
+    return lines.slice(0, dateIndex).findLast((line) => !ignored.has(line) && !line.includes(title) && !dateRegex.test(line));
 }
 
 function renderDescription($container: Cheerio<Element>, meta: { title: string; category: string[]; author?: string; dateText?: string }) {

@@ -6,7 +6,7 @@ import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
 export const route: Route = {
-    path: '/zj/search/:websiteid?/:word/:cateid?',
+    path: '/search/:websiteid?/:word/:cateid?',
     categories: ['government'],
     example: '/gov/zj/search',
     parameters: {
@@ -18,10 +18,10 @@ export const route: Route = {
     radar: [
         {
             source: ['search.zj.gov.cn/jsearchfront/search.do'],
-            target: '/zj/search/:websiteid?/:word/:cateid?',
+            target: '/search/:websiteid?/:word/:cateid?',
         },
     ],
-    name: '浙江省人民政府-全省政府网站统一搜索',
+    name: '全省政府网站统一搜索',
     url: 'search.zj.gov.cn/jsearchfront/search.do',
     maintainers: ['HaoyuLee'],
     description: `| 行政区域   | websiteid       |
@@ -59,23 +59,23 @@ export const route: Route = {
                 const title = $('.titleWrapper>a');
                 const footer = $('.sourceTime>span');
                 return {
-                    title: title.text().trim() || '',
+                    title: title.text().trim(),
                     link: title.attr('href') || '',
-                    pubDate: parseDate(footer.eq(1).text().trim().replace('时间:', '')) || '',
-                    author: footer.eq(0).text().trim().replace('来源:', '') || '',
-                    description: $('.newsDescribe>a').text() || '',
+                    pubDate: parseDate(footer.eq(1).text().replace('时间:', '')) || '',
+                    author: footer.eq(0).text().trim().replace('来源:', ''),
+                    description: $('.newsDescribe>a').text(),
                 };
             }) || [];
-        const res = {};
+        const res = new Map<string, DataItem>();
         for (const current of items) {
-            if (!res[current.link]) {
-                res[current.link] = current;
+            if (!res.has(current.link)) {
+                res.set(current.link, current);
             }
         }
         return {
             title: '浙江省人民政府-全省政府网站统一搜索',
             link: 'https://search.zj.gov.cn/jsearchfront/search.do',
-            item: Object.entries(res).map(([, value]) => value) as DataItem[],
+            item: res.values().toArray(),
         };
     },
 };

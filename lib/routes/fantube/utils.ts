@@ -8,7 +8,7 @@ import type { CreatorFragment, PostReelNode } from './types';
 export const baseUrl = 'https://www.fantube.tokyo';
 
 export const getCreatorFragment = (username: string) =>
-    cache.tryGet(`fantube:creator:${username}`, async () => {
+    cache.tryGet(`fantube:creator:${username}`, async (): Promise<CreatorFragment> => {
         const response = await ofetch(`${baseUrl}/r18/creator/${username}`, {
             headers: {
                 cookie: 'fantube-ageVerified=1;',
@@ -29,12 +29,12 @@ export const getCreatorFragment = (username: string) =>
             .find((c) => c?.hasOwnProperty('children'))
             .children.find((c) => c?.hasOwnProperty('creatorFragment')).creatorFragment;
 
-        return creatorFragment as CreatorFragment;
+        return creatorFragment;
     });
 
 export const getCreatorPostReelList = (identifier: string, limit: number): Promise<PostReelNode[]> =>
     cache.tryGet(`fantube:creatorPostReelList:${identifier}:${limit}`, async () => {
-        const response = await ofetch('https://api.prd.fantube.tokyo/graphql', {
+        const response = await ofetch<{ data: { posts: { nodes: PostReelNode[] } } }>('https://api.prd.fantube.tokyo/graphql', {
             headers: {
                 Referer: baseUrl,
             },
@@ -260,5 +260,5 @@ export const getCreatorPostReelList = (identifier: string, limit: number): Promi
             method: 'POST',
         });
 
-        return response.data.posts.nodes as PostReelNode[];
+        return response.data.posts.nodes;
     });

@@ -40,19 +40,19 @@ export const route: Route = {
 
 async function handler(ctx: Context): Promise<Data> {
     const host = 'https://sorrycc.com';
-    const limit = ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit')!, 10) : 100;
+    const limit = ctx.req.query('limit') ? Number(ctx.req.query('limit')!) : 100;
     const cookie = config.sorrycc.cookie;
 
     const data = await ofetch<Post[]>(`${host}/wp-json/wp/v2/posts?per_page=${limit}`);
 
     const items: DataItem[] = await Promise.all(
-        data.map(async (item) => {
+        data.map(async (item): Promise<DataItem> => {
             const title = item.title.rendered;
             const link = item.link;
             const pubDate = parseDate(item.date_gmt);
             const updated = parseDate(item.modified_gmt);
             if (item.categories.includes(7) && cookie) {
-                return (await cache.tryGet(link, async () => {
+                return await cache.tryGet(link, async () => {
                     const article = await ofetch(link, {
                         headers: {
                             Cookie: `wordpress_logged_in_${WORDPRESS_HASH}=${cookie}`,
@@ -67,7 +67,7 @@ async function handler(ctx: Context): Promise<Data> {
                         pubDate,
                         updated,
                     };
-                })) as unknown as DataItem;
+                });
             }
             return {
                 title,
@@ -75,7 +75,7 @@ async function handler(ctx: Context): Promise<Data> {
                 link,
                 pubDate,
                 updated,
-            } as DataItem;
+            };
         })
     );
 

@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio';
+import { load } from 'cheerio';
 import type { Context } from 'hono';
 import markdownit from 'markdown-it';
 
@@ -76,20 +76,20 @@ async function handler(ctx: Context) {
 
     const response = await ofetch(currentUrl);
 
-    const $ = cheerio.load(response);
+    const $ = load(response);
 
     const list = $('.card-body > a')
-        .slice(0, ctx.req.query('limit') ? Number.parseInt(ctx.req.query('limit')!, 10) : 30)
+        .slice(0, ctx.req.query('limit') ? Number(ctx.req.query('limit')!) : 30)
         .toArray()
-        .map((item) => {
+        .map((item): DataItem => {
             const $item = $(item);
             const href = $item.attr('href');
             return {
                 title: $item.find('h5').text().trim(),
                 link: rootUrl + href,
-                id: href?.split('/').pop()?.split('.')[0],
+                id: href?.split('/').pop()?.split('.', 1)[0],
             };
-        }) as DataItem[];
+        });
 
     const items = await Promise.all(
         list.map((item) =>
@@ -112,6 +112,6 @@ async function handler(ctx: Context) {
     return {
         title: `连享会 - ${$('.card-title').text()}`,
         link: currentUrl,
-        item: items as DataItem[],
+        item: items,
     };
 }
