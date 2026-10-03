@@ -21,8 +21,8 @@ jobs:
                   node-version: lts/*
                   cache: 'pnpm'
             - run: pnpm i
-            - run: npm run format:description
-            - run: npm run format
+            - run: pnpm run format:description
+            - run: pnpm run format
             - name: Commit files
               run: |
                   git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
