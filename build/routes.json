@@ -133673,6 +133673,62 @@
     "url": "www.xaut.edu.cn",
     "lang": "zh-CN"
   },
+  "xbangdan": {
+    "routes": {
+      "/articles/:region?": {
+        "path": "/articles/:region?",
+        "categories": [
+          "social-media"
+        ],
+        "view": 0,
+        "example": "/xbangdan/articles/cn",
+        "parameters": {
+          "region": {
+            "description": "区域",
+            "default": "cn",
+            "options": [
+              {
+                "value": "cn",
+                "label": "中文区"
+              },
+              {
+                "value": "gl",
+                "label": "海外区"
+              }
+            ]
+          }
+        },
+        "features": {
+          "requireConfig": false,
+          "requirePuppeteer": false,
+          "antiCrawler": false,
+          "supportBT": false,
+          "supportPodcast": false,
+          "supportScihub": false
+        },
+        "radar": [
+          {
+            "source": [
+              "xbangdan.com/articles/",
+              "xbangdan.com/articles"
+            ],
+            "target": "/articles"
+          }
+        ],
+        "name": "24 小时长文",
+        "maintainers": [
+          "dysthymia"
+        ],
+        "description": "订阅 X 榜单收录的最近 24 小时长文，默认中文区，`gl` 为海外区。包含网页提供的标题、作者、摘要和封面，链接指向 X 原帖。海外区沿用网站展示的中文翻译。时间范围按原帖发布时间计算，收录范围及更新频率由源站决定。",
+        "location": "articles.ts",
+        "module": "() => import('@/routes/xbangdan/articles.ts')"
+      }
+    },
+    "apiRoutes": {},
+    "name": "X榜单",
+    "url": "xbangdan.com",
+    "lang": "zh-CN"
+  },
   "xbmu": {
     "routes": {
       "/academic": {

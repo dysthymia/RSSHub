@@ -48596,6 +48596,20 @@
       }
     ]
   },
+  "xbangdan.com": {
+    "_name": "X榜单",
+    ".": [
+      {
+        "title": "24 小时长文",
+        "docs": "https://docs.rsshub.app/routes/social-media",
+        "source": [
+          "/articles/",
+          "/articles"
+        ],
+        "target": "/xbangdan/articles"
+      }
+    ]
+  },
   "xboxfan.com": {
     "_name": "盒心光环",
     ".": [

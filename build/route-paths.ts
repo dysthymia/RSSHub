@@ -3077,6 +3077,7 @@ export type RoutePath =
   | `/xaut/index/:category?`
   | `/xaut/jwc/:category?`
   | `/xaut/rsc/:category?`
+  | `/xbangdan/articles/:region?`
   | `/xbmu/academic`
   | `/xbmu/announcement`
   | `/xbookcn/:label?`
