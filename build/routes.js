@@ -163472,90 +163472,6 @@ export default {
     "description": "Specify options (in the format of query string) in parameter `routeParams` to control some extra features for Tweets\n\n| Key                               | Description                                                                                                                          | Accepts                | Defaults to                               |\n| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | ----------------------------------------- |\n| `readable`                        | Enable readable layout                                                                                                               | `0`/`1`/`true`/`false` | `false`                                   |\n| `authorNameBold`                  | Display author name in bold                                                                                                          | `0`/`1`/`true`/`false` | `false`                                   |\n| `showAuthorInTitle`               | Show author name in title                                                                                                            | `0`/`1`/`true`/`false` | `false` (`true` in `/twitter/followings`) |\n| `showAuthorAsTitleOnly`           | Show only author name as title                                                                                                       | `0`/`1`/`true`/`false` | `false`                                   |\n| `showAuthorInDesc`                | Show author name in description (RSS body)                                                                                           | `0`/`1`/`true`/`false` | `false` (`true` in `/twitter/followings`) |\n| `showQuotedAuthorAvatarInDesc`    | Show avatar of quoted Tweet's author in description (RSS body) (Not recommended if your RSS reader extracts images from description) | `0`/`1`/`true`/`false` | `false`                                   |\n| `showAuthorAvatarInDesc`          | Show avatar of author in description (RSS body) (Not recommended if your RSS reader extracts images from description)                | `0`/`1`/`true`/`false` | `false`                                   |\n| `showEmojiForRetweetAndReply`     | Use \"🔁\" instead of \"RT\", \"↩️\" & \"💬\" instead of \"Re\"                                                                                | `0`/`1`/`true`/`false` | `false`                                   |\n| `showSymbolForRetweetAndReply`    | Use \" RT \" instead of \"\", \" Re \" instead of \"\"                                                                                       | `0`/`1`/`true`/`false` | `true`                                    |\n| `showRetweetTextInTitle`          | Show quote comments in title (if `false`, only the retweeted tweet will be shown in the title)                                       | `0`/`1`/`true`/`false` | `true`                                    |\n| `addLinkForPics`                  | Add clickable links for Tweet pictures                                                                                               | `0`/`1`/`true`/`false` | `false`                                   |\n| `showTimestampInDescription`      | Show timestamp in description                                                                                                        | `0`/`1`/`true`/`false` | `false`                                   |\n| `showQuotedInTitle`               | Show quoted tweet in title                                                                                                           | `0`/`1`/`true`/`false` | `false`                                   |\n| `widthOfPics`                     | Width of Tweet pictures                                                                                                              | Unspecified/Integer    | Unspecified                               |\n| `heightOfPics`                    | Height of Tweet pictures                                                                                                             | Unspecified/Integer    | Unspecified                               |\n| `sizeOfAuthorAvatar`              | Size of author's avatar                                                                                                              | Integer                | `48`                                      |\n| `sizeOfQuotedAuthorAvatar`        | Size of quoted tweet's author's avatar                                                                                               | Integer                | `24`                                      |\n| `includeReplies`                  | Include replies, only available in `/twitter/user`                                                                                   | `0`/`1`/`true`/`false` | `false`                                   |\n| `includeRts`                      | Include retweets, only available in `/twitter/user`                                                                                  | `0`/`1`/`true`/`false` | `true`                                    |\n| `forceWebApi`                     | Force using Web API even if Developer API is configured, only available in `/twitter/user` and `/twitter/keyword`                    | `0`/`1`/`true`/`false` | `false`                                   |\n| `count`                           | `count` parameter passed to Twitter API, only available in `/twitter/user`                                                           | Unspecified/Integer    | Unspecified                               |\n| `onlyMedia`                       | Only get tweets with a media                                                                                                         | `0`/`1`/`true`/`false` | `false`                                   |\n| `mediaNumber `                    | Number the medias                                                                                                                    | `0`/`1`/`true`/`false` | `false`                                   |\n| `showEmojiForSubscriberOnly`      | Use \"🔒\" as prefix for subscriber-only posts                                                                                         | `0`/`1`/`true`/`false` | `false`                                   |\n| `showSymbolForSubscriberOnly`     | Use \"\\[Subscribers Only]\" as prefix for subscriber-only posts                                                                        | `0`/`1`/`true`/`false` | `true`                                    |\n| `showFullPrefixForSubscriberOnly` | Use \"🔒 \\[Subscribers Only]\" as prefix for subscriber-only posts                                                                     | `0`/`1`/`true`/`false` | `false`                                   |\n\nSpecify different option values than default values to improve readability. The URL\n\n```\nhttps://rsshub.app/twitter/user/durov/readable=1&authorNameBold=1&showAuthorInTitle=1&showAuthorInDesc=1&showQuotedAuthorAvatarInDesc=1&showAuthorAvatarInDesc=1&showEmojiForRetweetAndReply=1&showRetweetTextInTitle=0&addLinkForPics=1&showTimestampInDescription=1&showQuotedInTitle=1&heightOfPics=150\n```\n\ngenerates\n\n<img loading=\"lazy\" src=\"/img/readable-twitter.png\" alt=\"Readable Twitter RSS of Durov\" />\n\nCurrently supports two authentication methods:\n\n- Using `TWITTER_AUTH_TOKEN` (recommended): Configure a comma-separated list of `auth_token` cookies of logged-in Twitter Web. RSSHub will use this information to directly access Twitter's web API to obtain data.\n\n~~- Using `TWITTER_USERNAME` `TWITTER_PASSWORD` and `TWITTER_AUTHENTICATION_SECRET`: Configure a comma-separated list of Twitter username and password. RSSHub will use this information to log in to Twitter and obtain data using the mobile API. Please note that if you have not logged in with the current IP address before, it is easy to trigger Twitter's risk control mechanism.~~ This no longer works since mobile client attestation has been implemented in October 2025.\n\n- Using `TWITTER_CONSUMER_KEY` and `TWITTER_CONSUMER_SECRET`: Configure a comma-separated list of Twitter API keys and secrets. RSSHub will use this information to access Twitter's Pay-Per-Use developer API to obtain data.\n- OPTIONAL: Using `TWITTER_ACCESS_TOKEN` and `TWITTER_ACCESS_SECRET`: Configure a comma-separated list of Twitter API access tokens and secrets. RSSHub will use this information to access Twitter's Pay-Per-Use developer API with user authentication to obtain data. If not provided, RSSHub will only use app authentication, which may only access to public information.",
     "lang": "en"
   },
-  "tophub": {
-    "routes": {
-      "/:id": {
-        "path": "/:id",
-        "categories": [
-          "new-media"
-        ],
-        "example": "/tophub/Om4ejxvxEN",
-        "parameters": {
-          "id": "榜单id，可在 URL 中找到"
-        },
-        "features": {
-          "requireConfig": [
-            {
-              "name": "TOPHUB_COOKIE",
-              "optional": true,
-              "description": ""
-            }
-          ],
-          "requirePuppeteer": false,
-          "antiCrawler": false,
-          "supportBT": false,
-          "supportPodcast": false,
-          "supportScihub": false
-        },
-        "radar": [
-          {
-            "source": [
-              "tophub.today/n/:id"
-            ]
-          }
-        ],
-        "name": "榜单",
-        "maintainers": [
-          "LogicJake"
-        ],
-        "location": "index.ts",
-        "module": () => import('@/routes/tophub/index.ts')
-      },
-      "/list/:id": {
-        "path": "/list/:id",
-        "categories": [
-          "new-media"
-        ],
-        "example": "/tophub/list/Om4ejxvxEN",
-        "parameters": {
-          "id": "榜单id，可在 URL 中找到"
-        },
-        "features": {
-          "requireConfig": [
-            {
-              "name": "TOPHUB_COOKIE",
-              "optional": true,
-              "description": ""
-            }
-          ],
-          "requirePuppeteer": false,
-          "antiCrawler": false,
-          "supportBT": false,
-          "supportPodcast": false,
-          "supportScihub": false
-        },
-        "radar": [
-          {
-            "source": [
-              "tophub.today/n/:id"
-            ]
-          }
-        ],
-        "name": "榜单列表",
-        "maintainers": [
-          "akynazh"
-        ],
-        "description": "::: tip\n将榜单条目集合到一个列表中，且有热度排序，可避免推送大量条目。\n:::",
-        "location": "list.tsx",
-        "module": () => import('@/routes/tophub/list.tsx')
-      }
-    },
-    "apiRoutes": {},
-    "name": "今日热榜",
-    "url": "tophub.today",
-    "description": "::: warning\n由于需要登录后的 Cookie 值才能获取原始链接，所以需要自建，需要在环境变量中配置 `TOPHUB_COOKIE`，详情见部署页面的配置模块。\n:::",
-    "lang": "zh-CN"
-  },
   "economist": {
     "routes": {
       "/global-business-review/:language?": {
@@ -163660,5 +163576,89 @@ export default {
     "name": "The Economist",
     "url": "economist.com",
     "lang": "en"
+  },
+  "tophub": {
+    "routes": {
+      "/:id": {
+        "path": "/:id",
+        "categories": [
+          "new-media"
+        ],
+        "example": "/tophub/Om4ejxvxEN",
+        "parameters": {
+          "id": "榜单id，可在 URL 中找到"
+        },
+        "features": {
+          "requireConfig": [
+            {
+              "name": "TOPHUB_COOKIE",
+              "optional": true,
+              "description": ""
+            }
+          ],
+          "requirePuppeteer": false,
+          "antiCrawler": false,
+          "supportBT": false,
+          "supportPodcast": false,
+          "supportScihub": false
+        },
+        "radar": [
+          {
+            "source": [
+              "tophub.today/n/:id"
+            ]
+          }
+        ],
+        "name": "榜单",
+        "maintainers": [
+          "LogicJake"
+        ],
+        "location": "index.ts",
+        "module": () => import('@/routes/tophub/index.ts')
+      },
+      "/list/:id": {
+        "path": "/list/:id",
+        "categories": [
+          "new-media"
+        ],
+        "example": "/tophub/list/Om4ejxvxEN",
+        "parameters": {
+          "id": "榜单id，可在 URL 中找到"
+        },
+        "features": {
+          "requireConfig": [
+            {
+              "name": "TOPHUB_COOKIE",
+              "optional": true,
+              "description": ""
+            }
+          ],
+          "requirePuppeteer": false,
+          "antiCrawler": false,
+          "supportBT": false,
+          "supportPodcast": false,
+          "supportScihub": false
+        },
+        "radar": [
+          {
+            "source": [
+              "tophub.today/n/:id"
+            ]
+          }
+        ],
+        "name": "榜单列表",
+        "maintainers": [
+          "akynazh"
+        ],
+        "description": "::: tip\n将榜单条目集合到一个列表中，且有热度排序，可避免推送大量条目。\n:::",
+        "location": "list.tsx",
+        "module": () => import('@/routes/tophub/list.tsx')
+      }
+    },
+    "apiRoutes": {},
+    "name": "今日热榜",
+    "url": "tophub.today",
+    "description": "::: warning\n由于需要登录后的 Cookie 值才能获取原始链接，所以需要自建，需要在环境变量中配置 `TOPHUB_COOKIE`，详情见部署页面的配置模块。\n:::",
+    "lang": "zh-CN"
   }
 }
